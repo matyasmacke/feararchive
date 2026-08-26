@@ -1,0 +1,210 @@
+@import "tailwindcss";
+
+@theme {
+  --color-fear-950: #0a0014;
+  --color-fear-900: #110022;
+  --color-fear-800: #1f0040;
+  --color-fear-700: #2d005e;
+  --color-fear-600: #4a0080;
+  --color-fear-500: #6b21a8;
+  --color-fear-400: #9333ea;
+  --color-fear-300: #a855f7;
+  --color-fear-200: #c084fc;
+  --color-fear-100: #e9d5ff;
+  --color-fear-50: #faf5ff;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0014;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4a0080;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6b21a8;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #4a0080 #0a0014;
+}
+
+::selection {
+  background: #6b21a8;
+  color: white;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(147, 51, 234, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(147, 51, 234, 0.6); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.animate-slide-down {
+  animation: slideDown 0.3s ease-out forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.9) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes scaleOut {
+  from { opacity: 1; transform: scale(1) translateY(0); }
+  to { opacity: 0; transform: scale(0.95) translateY(10px); }
+}
+
+.animate-scale-out {
+  animation: scaleOut 0.2s ease-in forwards;
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(10px); }
+}
+
+.animate-fade-out {
+  animation: fadeOut 0.2s ease-in forwards;
+}
+
+@keyframes dropdownOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-10px); }
+}
+
+.animate-dropdown-out {
+  animation: dropdownOut 0.2s ease-in forwards;
+}
+
+.story-content p {
+  margin-bottom: 1rem;
+  line-height: 1.8;
+}
+
+/* Mobile drawer animations */
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideOutLeft {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOutOverlay {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.drawer-enter {
+  animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.drawer-exit {
+  animation: slideOutLeft 0.25s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+}
+
+.overlay-enter {
+  animation: fadeInOverlay 0.3s ease forwards;
+}
+
+.overlay-exit {
+  animation: fadeOutOverlay 0.25s ease forwards;
+}
+
+/* Search modal backdrop */
+@keyframes backdropFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-backdrop-in {
+  animation: backdropFadeIn 0.2s ease forwards;
+}
+
+/* Line clamp utility for older browsers */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Like Button Animations ── */
+@keyframes likeBounce {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.3); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+@keyframes likeUnbounce {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.8); }
+  100% { transform: scale(1); }
+}
+
+@keyframes floatUp {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-40px) scale(1.2); }
+}
+
+@keyframes particle1 { 0% { opacity: 1; transform: translate(0,0) scale(1); } 100% { opacity: 0; transform: translate(-20px,-30px) scale(0); } }
+@keyframes particle2 { 0% { opacity: 1; transform: translate(0,0) scale(1); } 100% { opacity: 0; transform: translate(20px,-30px) scale(0); } }
+@keyframes particle3 { 0% { opacity: 1; transform: translate(0,0) scale(1); } 100% { opacity: 0; transform: translate(-30px,-10px) scale(0); } }
+@keyframes particle4 { 0% { opacity: 1; transform: translate(0,0) scale(1); } 100% { opacity: 0; transform: translate(30px,-10px) scale(0); } }
+@keyframes particle5 { 0% { opacity: 1; transform: translate(0,0) scale(1); } 100% { opacity: 0; transform: translate(-15px,-35px) scale(0); } }
+@keyframes particle6 { 0% { opacity: 1; transform: translate(0,0) scale(1); } 100% { opacity: 0; transform: translate(15px,-35px) scale(0); } }
+
+.like-bounce {
+  animation: likeBounce 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+.like-unbounce {
+  animation: likeUnbounce 0.3s ease forwards;
+}
+
+.float-up {
+  animation: floatUp 0.6s ease-out forwards;
+}
+
+.particle-1 { animation: particle1 0.5s ease-out forwards; }
+.particle-2 { animation: particle2 0.5s ease-out forwards; }
+.particle-3 { animation: particle3 0.5s ease-out forwards; }
+.particle-4 { animation: particle4 0.5s ease-out forwards; }
+.particle-5 { animation: particle5 0.5s ease-out forwards; }
+.particle-6 { animation: particle6 0.5s ease-out forwards; }
