@@ -6,6 +6,7 @@ import { getCategoryNames } from '../store/settings';
 import { IconDisplay } from '../components/IconDisplay';
 import { stripFormatting } from '../components/FormattedContent';
 import { AdultBadge } from '../components/AdultBadge';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 import type { Story, User } from '../types';
 import {
   BookOpen, Users, Heart, TrendingUp,
@@ -21,7 +22,7 @@ interface HomeStats {
   topStories: Story[];
   recentStories: Story[];
   categoryCounts: { name: string; count: number }[];
-  topAuthors: { name: string; stories: number; likes: number }[];
+  topAuthors: { name: string; stories: number; likes: number; verified: boolean }[];
 }
 
 export function HomePage() {
@@ -56,14 +57,14 @@ export function HomePage() {
       count: allStories.filter((s: Story) => s.category === cat).length,
     })).filter((c: { count: number }) => c.count > 0).sort((a: { count: number }, b: { count: number }) => b.count - a.count).slice(0, 4);
 
-    const authorMap = new Map<string, { name: string; stories: number; likes: number }>();
+    const authorMap = new Map<string, { name: string; stories: number; likes: number; verified: boolean }>();
     for (const story of allStories) {
       const existing = authorMap.get(story.authorId);
       if (existing) {
         existing.stories++;
         existing.likes += story.likes;
       } else {
-        authorMap.set(story.authorId, { name: story.authorName, stories: 1, likes: story.likes });
+        authorMap.set(story.authorId, { name: story.authorName, stories: 1, likes: story.likes, verified: story.authorVerified });
       }
     }
     const topAuthors = [...authorMap.values()]
@@ -230,7 +231,7 @@ export function HomePage() {
                   </p>
 
                   <div className="flex items-center justify-between pt-3 border-t border-purple-900/20">
-                    <span className="text-xs text-gray-500">by {story.authorName}</span>
+                    <span className="flex items-center gap-1 text-xs text-gray-500">by {story.authorName}{story.authorVerified && <VerifiedBadge className="[&>svg]:h-3.5 [&>svg]:w-3.5" />}</span>
                     <div className="flex items-center gap-1 text-xs text-red-400 font-medium">
                       <Heart className="h-3.5 w-3.5 fill-red-400" />
                       {story.likes}
@@ -281,7 +282,7 @@ export function HomePage() {
                       {story.title}
                     </h4>
                     <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                      <span>by {story.authorName}</span>
+                      <span className="flex items-center gap-1">by {story.authorName}{story.authorVerified && <VerifiedBadge className="[&>svg]:h-3.5 [&>svg]:w-3.5" />}</span>
                       {(() => { 
                         const cc = getCategoryColor(story.category);
                         const icon = getCategoryIcon(story.category); 
@@ -390,7 +391,7 @@ export function HomePage() {
                       {author.name[0]}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-gray-200">{author.name}</h4>
+                      <h4 className="flex items-center gap-1 font-medium text-gray-200">{author.name}{author.verified && <VerifiedBadge />}</h4>
                       <p className="text-xs text-gray-500">
                         {author.stories} {author.stories === 1 ? 'story' : 'stories'} published
                       </p>

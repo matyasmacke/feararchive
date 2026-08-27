@@ -13,6 +13,7 @@ import { COLOR_PRESETS } from '../types';
 import { getSettings } from '../store/settings';
 import { stripFormatting } from './FormattedContent';
 import { AdultBadge } from './AdultBadge';
+import { VerifiedBadge } from './VerifiedBadge';
 
 export function Navbar() {
   const { user, logout } = useAuth();
@@ -340,7 +341,7 @@ export function Navbar() {
                     {(userMenuOpen || userMenuClosing) && (
                       <div className={`absolute right-0 mt-2 w-56 rounded-xl bg-gray-900 border border-purple-900/40 shadow-2xl shadow-purple-900/20 overflow-hidden z-[100] ${userMenuClosing ? 'animate-dropdown-out' : 'animate-slide-down'}`}>
                         <div className="px-4 py-3 border-b border-purple-900/30">
-                          <p className="text-sm font-medium text-white truncate">{user.username}</p>
+                          <p className="flex items-center gap-1 text-sm font-medium text-white"><span className="truncate">{user.username}</span>{user.isVerified && <VerifiedBadge />}</p>
                           <p className="text-xs text-gray-500 capitalize flex items-center gap-1">
                             <Shield className="h-3 w-3" /> {user.role}
                           </p>
@@ -469,7 +470,7 @@ export function Navbar() {
                     {user.avatar ? <img src={user.avatar} alt="" className="h-10 w-10 rounded-full object-cover" /> : user.username[0]}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{user.username}</p>
+                    <p className="flex items-center gap-1 text-sm font-medium text-white"><span className="truncate">{user.username}</span>{user.isVerified && <VerifiedBadge />}</p>
                     <p className="text-xs text-gray-500 capitalize">{user.role}</p>
                   </div>
                   <button onClick={() => { void logout().then(() => navigate('/')); closeMobileMenu(); }} className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors" aria-label="Logout">
@@ -637,7 +638,8 @@ function SearchModal({ onClose, navigate }: { onClose: () => void; navigate: (pa
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-gray-200 group-hover:text-purple-300 transition-colors truncate">{u.username}</p>
+                        <p className="min-w-0 truncate text-sm font-medium text-gray-200 transition-colors group-hover:text-purple-300">{u.username}</p>
+                        {u.isVerified && <VerifiedBadge />}
                         <span className="px-1.5 py-0.5 text-[10px] font-medium bg-purple-900/30 text-purple-400 rounded-md capitalize border border-purple-800/30">{u.role}</span>
                       </div>
                       {u.bio ? <p className="text-xs text-gray-600 truncate mt-0.5">{u.bio}</p> : <p className="text-xs text-gray-700 italic mt-0.5">No bio</p>}

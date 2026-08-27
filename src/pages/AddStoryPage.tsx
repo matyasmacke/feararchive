@@ -92,7 +92,7 @@ export function AddStoryPage() {
     return () => { active = false; };
   }, [requestedDraftId, user?.id]);
 
-  const requiresApproval = settings.requireApprovalForStories;
+  const requiresApproval = settings.requireApprovalForStories && user?.role !== 'admin' && !user?.isVerified;
 
   const publishStory = async () => {
     if (!user) return;
@@ -102,6 +102,7 @@ export function AddStoryPage() {
       content: content.trim(),
       authorId: user.id,
       authorName: user.username,
+      authorVerified: user.isVerified,
       category,
       length,
       isAdult,
@@ -153,6 +154,7 @@ export function AddStoryPage() {
         content: content.trim(),
         authorId: user.id,
         authorName: user.username,
+        authorVerified: user.isVerified,
         category,
         length,
         isAdult,

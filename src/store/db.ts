@@ -20,6 +20,7 @@ function toUser(row: Record<string, unknown>): User {
     instagram: (row.instagram as string) || undefined,
     hideLikedStories: (row.hide_liked_stories as boolean) || false,
     isGhost: (row.is_ghost as boolean) || false,
+    isVerified: (row.is_verified as boolean) || false,
   };
 }
 
@@ -35,6 +36,7 @@ function toUserRow(u: Partial<User>): Record<string, unknown> {
   if (u.instagram !== undefined) row.instagram = u.instagram || null;
   if (u.hideLikedStories !== undefined) row.hide_liked_stories = u.hideLikedStories;
   if (u.isGhost !== undefined) row.is_ghost = u.isGhost;
+  if (u.isVerified !== undefined) row.is_verified = u.isVerified;
   if (u.likedStories !== undefined) row.liked_stories = u.likedStories;
   if ('pendingNameChange' in u) row.pending_name_change = u.pendingNameChange ?? null;
   return row;
@@ -47,6 +49,7 @@ function toStory(row: Record<string, unknown>): Story {
     content: row.content as string,
     authorId: row.author_id as string,
     authorName: row.author_name as string,
+    authorVerified: (row.author_verified as boolean) || false,
     category: row.category as string,
     length: row.length as Story['length'],
     status: row.status as Story['status'],
@@ -66,6 +69,7 @@ function toStoryRow(s: Partial<Story>): Record<string, unknown> {
   if (s.content !== undefined) row.content = s.content;
   if (s.authorId !== undefined) row.author_id = s.authorId;
   if (s.authorName !== undefined) row.author_name = s.authorName;
+  if (s.authorVerified !== undefined) row.author_verified = s.authorVerified;
   if (s.category !== undefined) row.category = s.category;
   if (s.length !== undefined) row.length = s.length;
   if (s.status !== undefined) row.status = s.status;
@@ -269,6 +273,7 @@ class Database {
         content: story.content,
         author_id: story.authorId,
         author_name: story.authorName,
+        author_verified: story.authorVerified,
         category: story.category,
         length: story.length,
         status: story.status,

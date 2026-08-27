@@ -6,6 +6,7 @@ import { ConfirmDialog, useConfirmDialog } from '../components/ConfirmDialog';
 import { ImageCropper } from '../components/ImageCropper';
 import { stripFormatting } from '../components/FormattedContent';
 import { AdultBadge } from '../components/AdultBadge';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 import type { User, Story } from '../types';
 import {
   User as UserIcon, Edit3, Save, X, BookOpen, Heart,
@@ -370,6 +371,7 @@ export function ProfilePage() {
             <div className="flex-1 text-center sm:text-left min-w-0">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mb-2">
                 <h1 className="text-2xl font-bold text-white">{profileUser.username}</h1>
+                {profileUser.isVerified && <VerifiedBadge className="[&>svg]:h-5 [&>svg]:w-5" />}
                 {profileUser.pendingNameChange && (
                   <span className="flex items-center gap-1 px-2 py-0.5 bg-purple-900/30 border border-purple-800/30 rounded-lg text-xs text-purple-400">
                     <Clock className="h-3 w-3" />
@@ -878,7 +880,7 @@ export function ProfilePage() {
                         {story.isAdult && <AdultBadge />}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-gray-500">
-                        <span>by {story.authorName}</span>
+                        <span className="flex items-center gap-1">by {story.authorName}{story.authorVerified && <VerifiedBadge className="[&>svg]:h-3.5 [&>svg]:w-3.5" />}</span>
                         <span className="px-1.5 py-0.5 bg-gray-800 rounded">{story.category}</span>
                       </div>
                     </div>

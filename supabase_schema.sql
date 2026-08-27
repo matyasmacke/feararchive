@@ -15,10 +15,13 @@ create table if not exists public.profiles (
   instagram text,
   hide_liked_stories boolean not null default false,
   is_ghost boolean not null default false,
+  is_verified boolean not null default false,
   pending_name_change text,
   liked_stories text[] not null default '{}',
   created_at timestamptz not null default now()
 );
+
+alter table public.profiles add column if not exists is_verified boolean not null default false;
 
 create unique index if not exists profiles_username_lower_key
   on public.profiles (lower(username));
@@ -29,6 +32,7 @@ create table if not exists public.stories (
   content text not null default '',
   author_id uuid not null references public.profiles(id) on delete cascade,
   author_name text not null,
+  author_verified boolean not null default false,
   category text not null,
   length text not null check (length in ('short', 'medium', 'long')),
   status text not null default 'pending',
@@ -53,6 +57,7 @@ create table if not exists public.stories (
 
 -- Keep rerunning this schema safe for projects created before draft support.
 alter table public.stories add column if not exists updated_at timestamptz not null default now();
+alter table public.stories add column if not exists author_verified boolean not null default false;
 alter table public.stories add column if not exists is_adult boolean not null default false;
 alter table public.stories add column if not exists source_url text;
 alter table public.stories add column if not exists thumbnail_path text;
@@ -276,6 +281,7 @@ begin
     new.role := old.role;
     new.email := old.email;
     new.is_ghost := old.is_ghost;
+    new.is_verified := old.is_verified;
   end if;
 
   if actor_role not in ('admin', 'moderator') then
@@ -295,6 +301,32 @@ create trigger protect_profile_fields_trigger
   before update on public.profiles
   for each row execute function public.protect_profile_fields();
 
+create or replace function public.sync_profile_verification_to_stories()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $function$
+begin
+  if new.is_verified is distinct from old.is_verified then
+    update public.stories
+      set
+        author_verified = new.is_verified,
+        status = case
+          when new.is_verified and status = 'pending' then 'approved'
+          else status
+        end
+      where author_id = new.id;
+  end if;
+  return new;
+end;
+$function$;
+
+drop trigger if exists sync_profile_verification_trigger on public.profiles;
+create trigger sync_profile_verification_trigger
+  after update of is_verified on public.profiles
+  for each row execute function public.sync_profile_verification_to_stories();
+
 create or replace function public.prepare_story_write()
 returns trigger
 language plpgsql
@@ -304,31 +336,48 @@ as $function$
 declare
   actor_role text := public.get_my_role();
   approval_required boolean;
+  author_is_verified boolean := false;
 begin
   if tg_op = 'INSERT' then
     if auth.uid() is null or (auth.uid() <> new.author_id and actor_role not in ('admin', 'moderator')) then
       raise exception 'Story author does not match the authenticated user';
     end if;
-    select username into new.author_name from public.profiles where id = new.author_id;
+    select username, is_verified into new.author_name, author_is_verified
+      from public.profiles where id = new.author_id;
+    new.author_verified := coalesce(author_is_verified, false);
     if actor_role not in ('admin', 'moderator') then
       new.likes := 0;
       new.liked_by := '{}';
       if new.status <> 'draft' then
-        select coalesce((data ->> 'requireApprovalForStories')::boolean, true)
-          into approval_required from public.site_settings where id = 1;
-        new.status := case when approval_required then 'pending' else 'approved' end;
+        if author_is_verified then
+          new.status := 'approved';
+        else
+          select coalesce((data ->> 'requireApprovalForStories')::boolean, true)
+            into approval_required from public.site_settings where id = 1;
+          new.status := case when approval_required then 'pending' else 'approved' end;
+        end if;
       end if;
     end if;
   else
     new.updated_at := now();
     if actor_role not in ('admin', 'moderator') then
       new.author_id := old.author_id;
-      new.author_name := old.author_name;
+    end if;
+
+    select username, is_verified into new.author_name, author_is_verified
+      from public.profiles where id = new.author_id;
+    new.author_verified := coalesce(author_is_verified, false);
+
+    if actor_role not in ('admin', 'moderator') then
 
       if old.status = 'draft' and new.status <> 'draft' then
-        select coalesce((data ->> 'requireApprovalForStories')::boolean, true)
-          into approval_required from public.site_settings where id = 1;
-        new.status := case when approval_required then 'pending' else 'approved' end;
+        if author_is_verified then
+          new.status := 'approved';
+        else
+          select coalesce((data ->> 'requireApprovalForStories')::boolean, true)
+            into approval_required from public.site_settings where id = 1;
+          new.status := case when approval_required then 'pending' else 'approved' end;
+        end if;
       elsif old.status <> 'draft' then
         new.status := old.status;
       else
@@ -502,7 +551,7 @@ select
   id, username, role, status, bio, avatar, youtube, instagram,
   hide_liked_stories, false as is_ghost, null::text as pending_name_change,
   case when hide_liked_stories then '{}'::text[] else liked_stories end as liked_stories,
-  created_at
+  created_at, is_verified
 from public.profiles
 where status = 'approved' and is_ghost = false;
 

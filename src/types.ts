@@ -44,6 +44,7 @@ export interface User {
   instagram?: string;
   hideLikedStories?: boolean;
   isGhost?: boolean;
+  isVerified: boolean;
 }
 
 export interface Story {
@@ -52,6 +53,7 @@ export interface Story {
   content: string;
   authorId: string;
   authorName: string;
+  authorVerified: boolean;
   category: string;
   length: StoryLength;
   status: StoryStatus;

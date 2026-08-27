@@ -4,18 +4,20 @@ import { db } from '../store/db';
 import { useAuth } from '../store/AuthContext';
 import { ConfirmDialog, useConfirmDialog } from '../components/ConfirmDialog';
 import { AdultBadge } from '../components/AdultBadge';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 import { STORY_REPORT_REASON_LABELS } from '../types';
 import type { User, Story, StoryReport, StoryReportStatus, UserRole, ApprovalStatus, StoryStatus, ModApplication } from '../types';
 import {
   LayoutDashboard, BookOpen, Users, CheckCircle, XCircle,
   Trash2, Shield, Clock, Eye, BarChart3, AlertTriangle, Edit3,
   Flag, RotateCcw,
+  BadgeCheck, BadgeX,
 } from 'lucide-react';
 
 type Tab = 'overview' | 'stories' | 'reports' | 'users' | 'names' | 'mods';
 
 export function AdminDashboard() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [tab, setTab] = useState<Tab>('overview');
@@ -129,6 +131,12 @@ export function AdminDashboard() {
 
   const handleRoleChange = async (userId: string, role: UserRole) => {
     await db.updateUser(userId, { role });
+    bump();
+  };
+
+  const handleVerificationChange = async (userId: string, isVerified: boolean) => {
+    await db.updateUser(userId, { isVerified });
+    if (userId === user?.id) await refreshUser();
     bump();
   };
 
@@ -431,6 +439,7 @@ export function AdminDashboard() {
                     onApprove={() => handleUserAction(u.id, 'approved')}
                     onReject={() => handleUserAction(u.id, 'rejected')}
                     onRoleChange={(role) => handleRoleChange(u.id, role)}
+                    onVerificationChange={(isVerified) => handleVerificationChange(u.id, isVerified)}
                     onDelete={() => handleDeleteUser(u)}
                   />
                 ))}
@@ -679,7 +688,7 @@ function StoryRow({ story, isAdmin, onApprove, onReject, onDelete, onView }: {
           {story.isAdult && <AdultBadge />}
         </div>
         <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
-          <span>by {story.authorName}</span>
+          <span className="flex items-center gap-1">by {story.authorName}{story.authorVerified && <VerifiedBadge className="[&>svg]:h-3.5 [&>svg]:w-3.5" />}</span>
           <span className="px-1.5 py-0.5 bg-gray-800 rounded">{story.category}</span>
           <span className="capitalize">{story.length}</span>
           <span>{new Date(story.createdAt).toLocaleDateString()}</span>
@@ -712,13 +721,14 @@ function StoryRow({ story, isAdmin, onApprove, onReject, onDelete, onView }: {
 }
 
 /* ── User Row ── */
-function UserRow({ targetUser, isAdmin, currentUserId, onApprove, onReject, onRoleChange, onDelete }: {
+function UserRow({ targetUser, isAdmin, currentUserId, onApprove, onReject, onRoleChange, onVerificationChange, onDelete }: {
   targetUser: User;
   isAdmin: boolean;
   currentUserId: string;
   onApprove: () => void;
   onReject: () => void;
   onRoleChange: (role: UserRole) => void;
+  onVerificationChange: (isVerified: boolean) => void;
   onDelete: () => void;
 }) {
   const isSelf = targetUser.id === currentUserId;
@@ -746,6 +756,7 @@ function UserRow({ targetUser, isAdmin, currentUserId, onApprove, onReject, onRo
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-0.5 flex-wrap">
             <span className="font-medium text-gray-200 truncate">{targetUser.username}</span>
+            {targetUser.isVerified && <VerifiedBadge />}
             {targetUser.pendingNameChange && (
               <span className="text-xs text-purple-400 bg-purple-900/30 px-1.5 py-0.5 rounded">
                 → {targetUser.pendingNameChange}
@@ -767,6 +778,20 @@ function UserRow({ targetUser, isAdmin, currentUserId, onApprove, onReject, onRo
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0 flex-wrap">
+        {isAdmin && targetUser.status === 'approved' && (
+          <button
+            onClick={() => onVerificationChange(!targetUser.isVerified)}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-all ${
+              targetUser.isVerified
+                ? 'bg-sky-900/20 text-sky-400 hover:bg-red-900/20 hover:text-red-400'
+                : 'bg-gray-800 text-gray-400 hover:bg-sky-900/30 hover:text-sky-400'
+            }`}
+            title={targetUser.isVerified ? 'Remove verification' : 'Verify account'}
+          >
+            {targetUser.isVerified ? <BadgeX className="h-4 w-4" /> : <BadgeCheck className="h-4 w-4" />}
+            {targetUser.isVerified ? 'Unverify' : 'Verify'}
+          </button>
+        )}
         {targetUser.status !== 'approved' && (
           <button onClick={onApprove} className="p-2 rounded-lg bg-green-900/20 text-green-400 hover:bg-green-900/40 transition-all" title="Approve">
             <CheckCircle className="h-4 w-4" />

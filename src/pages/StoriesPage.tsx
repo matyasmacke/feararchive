@@ -6,6 +6,7 @@ import { getSettings, getCategoryNames } from '../store/settings';
 import { IconDisplay } from '../components/IconDisplay';
 import { stripFormatting } from '../components/FormattedContent';
 import { AdultBadge } from '../components/AdultBadge';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 import type { Story, StoryLength } from '../types';
 import { Search, Heart, Clock, BookOpen, Filter, X, ChevronDown } from 'lucide-react';
 
@@ -276,7 +277,7 @@ export function StoriesPage() {
                     </p>
 
                     <div className="flex items-center justify-between pt-3 border-t border-purple-900/20">
-                      <span className="text-xs text-gray-500">by {story.authorName}</span>
+                      <span className="flex items-center gap-1 text-xs text-gray-500">by {story.authorName}{story.authorVerified && <VerifiedBadge className="[&>svg]:h-3.5 [&>svg]:w-3.5" />}</span>
                       <div className="flex items-center gap-3 text-xs text-gray-600">
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />

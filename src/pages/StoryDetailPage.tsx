@@ -7,6 +7,7 @@ import { getSettings } from '../store/settings';
 import { ConfirmDialog, useConfirmDialog } from '../components/ConfirmDialog';
 import { FormattedContent } from '../components/FormattedContent';
 import { StoryReportModal } from '../components/StoryReportModal';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 import { normalizeExternalHttpUrl } from '../utils/externalUrl';
 import type { Story, StoryReportReason } from '../types';
 import {
@@ -330,6 +331,7 @@ export function StoryDetailPage() {
                 <User className="h-4 w-4 text-white" />
               </div>
               {story.authorName}
+              {story.authorVerified && <VerifiedBadge />}
             </Link>
             <span className="flex items-center gap-1">
               <Clock className="h-4 w-4" />
