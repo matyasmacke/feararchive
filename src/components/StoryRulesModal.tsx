@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ScrollText, CheckCircle, XCircle, ChevronDown } from 'lucide-react';
 import { getSettings } from '../store/settings';
+import { FormattedContent } from './FormattedContent';
 
 interface Props {
   onAgree: () => void;
@@ -25,22 +26,6 @@ export function StoryRulesModal({ onAgree, onDisagree }: Props) {
     const el = e.currentTarget;
     const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 20;
     if (atBottom) setScrolledToBottom(true);
-  };
-
-  // Convert markdown-ish bold to JSX
-  const renderRules = (text: string) => {
-    return text.split('\n').map((line, i) => {
-      if (!line.trim()) return <div key={i} className="h-2" />;
-      // Bold: **text**
-      const parts = line.split(/\*\*(.*?)\*\*/g);
-      return (
-        <p key={i} className="text-sm text-gray-300 leading-relaxed">
-          {parts.map((part, j) =>
-            j % 2 === 1 ? <strong key={j} className="text-purple-300 font-semibold">{part}</strong> : part
-          )}
-        </p>
-      );
-    });
   };
 
   return (
@@ -68,7 +53,7 @@ export function StoryRulesModal({ onAgree, onDisagree }: Props) {
           className="flex-1 overflow-y-auto px-6 py-5 space-y-1 min-h-0"
           onScroll={handleScroll}
         >
-          {renderRules(rules)}
+          <FormattedContent content={rules} compact className="text-sm text-gray-300" />
         </div>
 
         {/* Scroll hint */}

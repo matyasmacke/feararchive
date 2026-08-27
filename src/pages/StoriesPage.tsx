@@ -4,6 +4,7 @@ import { db } from '../store/db';
 import { LENGTH_LABELS, getCategoryColor, getCategoryIcon } from '../types';
 import { getSettings, getCategoryNames } from '../store/settings';
 import { IconDisplay } from '../components/IconDisplay';
+import { stripFormatting } from '../components/FormattedContent';
 import type { Story, StoryLength } from '../types';
 import { Search, Heart, Clock, BookOpen, Filter, X, ChevronDown } from 'lucide-react';
 
@@ -261,7 +262,7 @@ export function StoriesPage() {
                     </h3>
 
                     <p className="text-sm text-gray-500 line-clamp-3 mb-4 leading-relaxed">
-                      {story.content.substring(0, 150)}...
+                      {stripFormatting(story.content).substring(0, 150)}...
                     </p>
 
                     <div className="flex items-center justify-between pt-3 border-t border-purple-900/20">

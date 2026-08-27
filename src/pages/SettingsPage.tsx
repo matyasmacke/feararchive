@@ -8,6 +8,8 @@ import type { SiteSettings } from '../store/settings';
 import type { CategoryConfig, ColorPreset, CategoryIcon } from '../types';
 import { COLOR_PRESETS, COLOR_PRESET_LABELS, COLOR_PRESET_HEX, DEFAULT_CATEGORIES, CATEGORY_ICONS } from '../types';
 import { IconDisplay } from '../components/IconDisplay';
+import { FormattingEditor } from '../components/FormattingEditor';
+import { FormattedContent } from '../components/FormattedContent';
 import type { ChangelogEntry, Story, User } from '../types';
 import {
   Settings, Shield, Trash2, AlertTriangle, CheckCircle,
@@ -779,11 +781,11 @@ export function SettingsPage() {
           <div className="p-6">
             <label className="block text-sm font-medium text-gray-300 mb-1.5">Story Writing Rules</label>
             <p className="text-xs text-gray-500 mb-3">These rules will be displayed to users the first time they try to publish a story, and on the public Rules page. You can use basic markdown.</p>
-            <textarea
+            <FormattingEditor
               value={settings.storyRules}
-              onChange={e => updateSetting('storyRules', e.target.value)}
+              onChange={value => updateSetting('storyRules', value)}
               rows={12}
-              className="w-full px-4 py-3 bg-gray-900/80 border border-purple-900/30 rounded-xl text-gray-200 focus:outline-none focus:border-purple-500/50 transition-all text-sm font-mono resize-y"
+              aria-label="Story writing rules"
             />
           </div>
         </section>
@@ -797,11 +799,11 @@ export function SettingsPage() {
           <div className="p-6">
             <label className="block text-sm font-medium text-gray-300 mb-1.5">GDPR Statement</label>
             <p className="text-xs text-gray-500 mb-3">General Data Protection Regulation (GDPR) Compliance Statement</p>
-            <textarea
+            <FormattingEditor
               value={settings.gdprText}
-              onChange={e => updateSetting('gdprText', e.target.value)}
+              onChange={value => updateSetting('gdprText', value)}
               rows={12}
-              className="w-full px-4 py-3 bg-gray-900/80 border border-purple-900/30 rounded-xl text-gray-200 focus:outline-none focus:border-purple-500/50 transition-all text-sm font-mono resize-y"
+              aria-label="GDPR statement"
             />
           </div>
         </section>
@@ -870,13 +872,17 @@ export function SettingsPage() {
                       {clChanges.map((change, idx) => (
                         <div key={idx} className="flex items-start gap-2">
                           <span className="mt-2 text-purple-500 shrink-0"><Terminal className="h-3 w-3" /></span>
-                          <input
-                            type="text"
+                          <div className="min-w-0 flex-1">
+                            <FormattingEditor
                             value={change}
-                            onChange={e => updateClChange(idx, e.target.value)}
+                            onChange={value => updateClChange(idx, value)}
                             placeholder="Describe the change, feature, or bug fix..."
-                            className="flex-1 px-3 py-2 bg-gray-900/80 border border-purple-900/30 rounded-lg text-gray-200 text-sm focus:outline-none focus:border-purple-500/50"
-                          />
+                            rows={3}
+                            compact
+                            showHelp={idx === 0}
+                            aria-label={`Changelog change ${idx + 1}`}
+                            />
+                          </div>
                           <button
                             onClick={() => removeClChange(idx)}
                             disabled={clChanges.length <= 1}
@@ -932,7 +938,7 @@ export function SettingsPage() {
                             {log.changes.slice(0, 2).map((c, i) => (
                               <li key={i} className="text-xs text-gray-500 flex items-center gap-1.5">
                                 <Minus className="h-3 w-3 shrink-0 text-purple-900/50" />
-                                <span className="truncate max-w-[280px] sm:max-w-md">{c}</span>
+                                <FormattedContent content={c} compact className="max-w-[280px] sm:max-w-md" />
                               </li>
                             ))}
                             {log.changes.length > 2 && (

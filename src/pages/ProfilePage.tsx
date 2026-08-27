@@ -4,6 +4,7 @@ import { db } from '../store/db';
 import { useAuth } from '../store/AuthContext';
 import { ConfirmDialog, useConfirmDialog } from '../components/ConfirmDialog';
 import { ImageCropper } from '../components/ImageCropper';
+import { stripFormatting } from '../components/FormattedContent';
 import type { User, Story } from '../types';
 import {
   User as UserIcon, Edit3, Save, X, BookOpen, Heart,
@@ -763,7 +764,7 @@ export function ProfilePage() {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-500 line-clamp-1">{story.content.substring(0, 100)}...</p>
+                      <p className="text-sm text-gray-500 line-clamp-1">{stripFormatting(story.content).substring(0, 100)}...</p>
                     </div>
                     <div className="flex items-center gap-1 text-xs text-gray-500 shrink-0">
                       <Heart className="h-3 w-3" /> {story.likes}

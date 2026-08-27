@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { db } from '../store/db';
 import type { ChangelogEntry } from '../types';
 import { Calendar } from 'lucide-react';
+import { FormattedContent } from '../components/FormattedContent';
 
 export default function ChangelogPage() {
   const [changelogs, setChangelogs] = useState<ChangelogEntry[]>([]);
@@ -66,7 +67,11 @@ export default function ChangelogPage() {
                       {log.changes.map((change, i) => (
                         <li key={i} className="flex items-start gap-3">
                           <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-2 shrink-0"></span>
-                          <span className="text-purple-200/80 leading-relaxed">{change}</span>
+                          <FormattedContent
+                            content={change}
+                            compact
+                            className="min-w-0 flex-1 text-purple-200/80"
+                          />
                         </li>
                       ))}
                     </ul>

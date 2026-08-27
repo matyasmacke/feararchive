@@ -5,6 +5,7 @@ import { useAuth } from '../store/AuthContext';
 import { LENGTH_LABELS, getCategoryColor } from '../types';
 import { getSettings } from '../store/settings';
 import { ConfirmDialog, useConfirmDialog } from '../components/ConfirmDialog';
+import { FormattedContent } from '../components/FormattedContent';
 import type { Story } from '../types';
 import {
   Heart, Clock, ArrowLeft, BookOpen, User, Trash2,
@@ -250,9 +251,10 @@ export function StoryDetailPage() {
 
       {/* Content */}
       <div className="max-w-3xl mx-auto px-4 py-10">
-        <div className="story-content text-gray-300 text-base md:text-lg leading-relaxed whitespace-pre-line">
-          {story.content}
-        </div>
+        <FormattedContent
+          content={story.content}
+          className="story-content text-base text-gray-300 md:text-lg"
+        />
 
         {/* Actions bar */}
         <div className="mt-12 pt-8 border-t border-purple-900/30">

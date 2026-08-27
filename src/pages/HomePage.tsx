@@ -4,6 +4,7 @@ import { db } from '../store/db';
 import { getCategoryColor, getCategoryIcon } from '../types';
 import { getCategoryNames } from '../store/settings';
 import { IconDisplay } from '../components/IconDisplay';
+import { stripFormatting } from '../components/FormattedContent';
 import type { Story, User } from '../types';
 import {
   BookOpen, Users, Heart, TrendingUp,
@@ -212,7 +213,7 @@ export function HomePage() {
                   </h3>
 
                   <p className="text-sm text-gray-500 line-clamp-2 mb-4 leading-relaxed">
-                    {story.content.substring(0, 120)}...
+                    {stripFormatting(story.content).substring(0, 120)}...
                   </p>
 
                   <div className="flex items-center justify-between pt-3 border-t border-purple-900/20">

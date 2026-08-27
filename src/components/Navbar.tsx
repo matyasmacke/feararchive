@@ -11,6 +11,7 @@ import {
 import type { Story, User as UserType } from '../types';
 import { COLOR_PRESETS } from '../types';
 import { getSettings } from '../store/settings';
+import { stripFormatting } from './FormattedContent';
 
 export function Navbar() {
   const { user, logout } = useAuth();
@@ -539,12 +540,13 @@ function SearchModal({ onClose, navigate }: { onClose: () => void; navigate: (pa
 
   const goTo = (path: string) => { navigate(path); handleClose(); };
   const getExcerpt = (content: string) => {
+    const plainContent = stripFormatting(content);
     const q = query.trim().toLowerCase();
-    const idx = content.toLowerCase().indexOf(q);
-    if (idx === -1) return content.slice(0, 80) + (content.length > 80 ? '...' : '');
+    const idx = plainContent.toLowerCase().indexOf(q);
+    if (idx === -1) return plainContent.slice(0, 80) + (plainContent.length > 80 ? '...' : '');
     const start = Math.max(0, idx - 30);
-    const end = Math.min(content.length, idx + q.length + 50);
-    return (start > 0 ? '...' : '') + content.slice(start, end) + (end < content.length ? '...' : '');
+    const end = Math.min(plainContent.length, idx + q.length + 50);
+    return (start > 0 ? '...' : '') + plainContent.slice(start, end) + (end < plainContent.length ? '...' : '');
   };
 
   const hasResults = storyResults.length > 0 || userResults.length > 0;

@@ -7,6 +7,7 @@ import { getSettings, getCategoryNames } from '../store/settings';
 import type { StoryLength } from '../types';
 import { PenTool, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { StoryRulesModal } from '../components/StoryRulesModal';
+import { FormattingEditor } from '../components/FormattingEditor';
 
 export function AddStoryPage() {
   const { user } = useAuth();
@@ -102,7 +103,21 @@ export function AddStoryPage() {
           <div><label className="block text-sm font-medium text-gray-300 mb-2">Category</label><select value={category} onChange={e => setCategory(e.target.value)} className="w-full px-4 py-3 bg-gray-900/80 border border-purple-900/30 rounded-xl text-gray-200 focus:outline-none focus:border-purple-500/50 cursor-pointer">{categories.map(c => (<option key={c} value={c}>{c}</option>))}</select></div>
           <div><label className="block text-sm font-medium text-gray-300 mb-2">Story Length</label><select value={length} onChange={e => setLength(e.target.value as StoryLength)} className="w-full px-4 py-3 bg-gray-900/80 border border-purple-900/30 rounded-xl text-gray-200 focus:outline-none focus:border-purple-500/50 cursor-pointer">{(Object.entries(LENGTH_LABELS) as [StoryLength, string][]).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}</select></div>
         </div>
-        <div><label className="block text-sm font-medium text-gray-300 mb-2">Your Story <span className={`font-normal ml-2 ${content.length > settings.maxStoryLength ? 'text-red-400' : 'text-gray-600'}`}>({content.length.toLocaleString()} / {settings.maxStoryLength.toLocaleString()} characters)</span></label><textarea value={content} onChange={e => setContent(e.target.value)} placeholder="It was a dark and stormy night..." rows={16} className="w-full px-4 py-3 bg-gray-900/80 border border-purple-900/30 rounded-xl text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-all resize-y leading-relaxed" /></div>
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Your Story
+            <span className={`font-normal ml-2 ${content.length > settings.maxStoryLength ? 'text-red-400' : 'text-gray-600'}`}>
+              ({content.length.toLocaleString()} / {settings.maxStoryLength.toLocaleString()} characters)
+            </span>
+          </label>
+          <FormattingEditor
+            value={content}
+            onChange={setContent}
+            placeholder="It was a dark and stormy night..."
+            rows={16}
+            aria-label="Your story content"
+          />
+        </div>
         <div className="flex items-center justify-between pt-2">
           <p className="text-xs text-gray-600">{requiresApproval ? 'Stories are reviewed before publishing.' : 'Stories will be published immediately.'}</p>
           <button type="submit" disabled={submitting} className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-medium rounded-xl transition-all shadow-lg shadow-purple-900/30 disabled:opacity-60 flex items-center gap-2">{submitting && <Loader2 className="h-4 w-4 animate-spin" />}{requiresApproval ? 'Submit for Review' : 'Publish Story'}</button>
