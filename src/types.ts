@@ -2,6 +2,8 @@ export type UserRole = 'user' | 'moderator' | 'admin';
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 export type StoryStatus = ApprovalStatus | 'draft';
 export type StoryLength = 'short' | 'medium' | 'long';
+export type StoryReportStatus = 'open' | 'resolved' | 'dismissed';
+export type StoryReportReason = 'harmful' | 'copyright' | 'spam' | 'adult-label' | 'other';
 
 export interface ChangelogEntry {
   id: string;
@@ -60,6 +62,31 @@ export interface Story {
   likes: number;
   likedBy: string[];
 }
+
+export interface StoryReport {
+  id: string;
+  storyId: string;
+  storyTitle: string;
+  storyAuthorId: string;
+  storyAuthorName: string;
+  reporterId: string;
+  reporterName: string;
+  reason: StoryReportReason;
+  details: string;
+  status: StoryReportStatus;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const STORY_REPORT_REASON_LABELS: Record<StoryReportReason, string> = {
+  harmful: 'Inappropriate or harmful content',
+  copyright: 'Copyright or stolen content',
+  spam: 'Spam or misleading content',
+  'adult-label': 'Incorrect or missing 18+ label',
+  other: 'Other',
+};
 
 export const LENGTH_LABELS: Record<StoryLength, string> = {
   short: 'Short Read (< 5 min)',

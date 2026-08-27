@@ -6,11 +6,12 @@ import { LENGTH_LABELS, getCategoryColor } from '../types';
 import { getSettings } from '../store/settings';
 import { ConfirmDialog, useConfirmDialog } from '../components/ConfirmDialog';
 import { FormattedContent } from '../components/FormattedContent';
+import { StoryReportModal } from '../components/StoryReportModal';
 import { normalizeExternalHttpUrl } from '../utils/externalUrl';
-import type { Story } from '../types';
+import type { Story, StoryReportReason } from '../types';
 import {
   Heart, Clock, ArrowLeft, BookOpen, User, Trash2,
-  CheckCircle, XCircle, Shield, AlertTriangle, Edit3, ShieldAlert, ExternalLink,
+  CheckCircle, XCircle, Shield, AlertTriangle, Edit3, ShieldAlert, ExternalLink, Flag,
 } from 'lucide-react';
 
 export function StoryDetailPage() {
@@ -21,6 +22,8 @@ export function StoryDetailPage() {
   const [adultWarningAccepted, setAdultWarningAccepted] = useState(false);
   const [liked, setLiked] = useState(false);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [hasReported, setHasReported] = useState(false);
   const { confirm, dialogProps } = useConfirmDialog();
 
   // Like animation state
@@ -40,6 +43,18 @@ export function StoryDetailPage() {
       }
     });
   }, [id, user]);
+
+  useEffect(() => {
+    let active = true;
+    if (!id || !user) {
+      setHasReported(false);
+      return () => { active = false; };
+    }
+    void db.hasUserReportedStory(id, user.id).then(reported => {
+      if (active) setHasReported(reported);
+    });
+    return () => { active = false; };
+  }, [id, user?.id]);
 
   useEffect(() => {
     if (!story?.isAdult || adultWarningAccepted) return;
@@ -79,6 +94,25 @@ export function StoryDetailPage() {
   const showFeedback = (msg: string) => {
     setActionFeedback(msg);
     setTimeout(() => setActionFeedback(null), 3000);
+  };
+
+  const handleSubmitReport = async (reason: StoryReportReason, details: string) => {
+    if (!user || !story) throw new Error('You need to be logged in to report a story.');
+    try {
+      await db.addStoryReport({ storyId: story.id, reporterId: user.id, reason, details });
+      setHasReported(true);
+      setShowReportModal(false);
+      showFeedback('Thank you. The story was reported to the moderation team.');
+    } catch (reportError) {
+      const code = typeof reportError === 'object' && reportError && 'code' in reportError
+        ? String(reportError.code)
+        : '';
+      if (code === '23505') {
+        setHasReported(true);
+        throw new Error('You have already reported this story.');
+      }
+      throw new Error('The report could not be submitted. Make sure the reports migration has been applied.');
+    }
   };
 
   const handleDelete = () => {
@@ -196,6 +230,13 @@ export function StoryDetailPage() {
   return (
     <div className="min-h-screen">
       <ConfirmDialog {...dialogProps} />
+      {showReportModal && (
+        <StoryReportModal
+          storyTitle={story.title}
+          onClose={() => setShowReportModal(false)}
+          onSubmit={handleSubmitReport}
+        />
+      )}
 
       {/* Action Feedback Toast */}
       {actionFeedback && (
@@ -369,6 +410,21 @@ export function StoryDetailPage() {
                   ) : (
                     liked ? 'Liked' : 'Like'
                   )}
+                </button>
+              )}
+
+              {story.status === 'approved' && (
+                <button
+                  onClick={() => user ? setShowReportModal(true) : navigate('/login')}
+                  disabled={hasReported}
+                  className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all ${
+                    hasReported
+                      ? 'cursor-default border-green-900/30 bg-green-900/10 text-green-500'
+                      : 'border-red-900/30 bg-gray-900 text-gray-500 hover:border-red-800/50 hover:text-red-400'
+                  }`}
+                >
+                  {hasReported ? <CheckCircle className="h-4 w-4" /> : <Flag className="h-4 w-4" />}
+                  {hasReported ? 'Reported' : 'Report Story'}
                 </button>
               )}
 
