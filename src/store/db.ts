@@ -50,6 +50,7 @@ function toStory(row: Record<string, unknown>): Story {
     category: row.category as string,
     length: row.length as Story['length'],
     status: row.status as Story['status'],
+    isAdult: (row.is_adult as boolean) || false,
     likes: (row.likes as number) || 0,
     likedBy: (row.liked_by as string[]) || [],
     createdAt: row.created_at as string,
@@ -66,6 +67,7 @@ function toStoryRow(s: Partial<Story>): Record<string, unknown> {
   if (s.category !== undefined) row.category = s.category;
   if (s.length !== undefined) row.length = s.length;
   if (s.status !== undefined) row.status = s.status;
+  if (s.isAdult !== undefined) row.is_adult = s.isAdult;
   if (s.likes !== undefined) row.likes = s.likes;
   if (s.likedBy !== undefined) row.liked_by = s.likedBy;
   return row;
@@ -247,6 +249,7 @@ class Database {
         category: story.category,
         length: story.length,
         status: story.status,
+        is_adult: story.isAdult,
       })
       .select()
       .single();

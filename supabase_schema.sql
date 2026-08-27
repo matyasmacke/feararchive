@@ -32,6 +32,7 @@ create table if not exists public.stories (
   category text not null,
   length text not null check (length in ('short', 'medium', 'long')),
   status text not null default 'pending',
+  is_adult boolean not null default false,
   likes integer not null default 0 check (likes >= 0),
   liked_by text[] not null default '{}',
   created_at timestamptz not null default now(),
@@ -47,6 +48,7 @@ create table if not exists public.stories (
 
 -- Keep rerunning this schema safe for projects created before draft support.
 alter table public.stories add column if not exists updated_at timestamptz not null default now();
+alter table public.stories add column if not exists is_adult boolean not null default false;
 alter table public.stories alter column title set default '';
 alter table public.stories alter column content set default '';
 alter table public.stories drop constraint if exists stories_title_check;

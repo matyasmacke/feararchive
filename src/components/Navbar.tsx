@@ -12,6 +12,7 @@ import type { Story, User as UserType } from '../types';
 import { COLOR_PRESETS } from '../types';
 import { getSettings } from '../store/settings';
 import { stripFormatting } from './FormattedContent';
+import { AdultBadge } from './AdultBadge';
 
 export function Navbar() {
   const { user, logout } = useAuth();
@@ -589,7 +590,10 @@ function SearchModal({ onClose, navigate }: { onClose: () => void; navigate: (pa
                       <BookOpen className="h-5 w-5 text-purple-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-200 group-hover:text-purple-300 transition-colors truncate">{story.title}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="min-w-0 truncate text-sm font-medium text-gray-200 transition-colors group-hover:text-purple-300">{story.title}</p>
+                        {story.isAdult && <AdultBadge className="text-[10px]" />}
+                      </div>
                       <p className="text-xs text-gray-600 mt-0.5 line-clamp-2 leading-relaxed">{getExcerpt(story.content)}</p>
                       <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${presetColor.bg} ${presetColor.text} text-[10px] font-medium rounded-md border ${presetColor.border}`}>

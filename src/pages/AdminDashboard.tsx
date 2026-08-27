@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { db } from '../store/db';
 import { useAuth } from '../store/AuthContext';
 import { ConfirmDialog, useConfirmDialog } from '../components/ConfirmDialog';
+import { AdultBadge } from '../components/AdultBadge';
 import type { User, Story, UserRole, ApprovalStatus, StoryStatus, ModApplication } from '../types';
 import {
   LayoutDashboard, BookOpen, Users, CheckCircle, XCircle,
@@ -536,6 +537,7 @@ function StoryRow({ story, isAdmin, onApprove, onReject, onDelete, onView }: {
           <span className={`px-2 py-0.5 text-xs rounded-lg border capitalize ${statusColors[story.status]}`}>
             {story.status}
           </span>
+          {story.isAdult && <AdultBadge />}
         </div>
         <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
           <span>by {story.authorName}</span>

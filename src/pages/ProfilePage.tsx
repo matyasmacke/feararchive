@@ -5,6 +5,7 @@ import { useAuth } from '../store/AuthContext';
 import { ConfirmDialog, useConfirmDialog } from '../components/ConfirmDialog';
 import { ImageCropper } from '../components/ImageCropper';
 import { stripFormatting } from '../components/FormattedContent';
+import { AdultBadge } from '../components/AdultBadge';
 import type { User, Story } from '../types';
 import {
   User as UserIcon, Edit3, Save, X, BookOpen, Heart,
@@ -792,6 +793,7 @@ export function ProfilePage() {
                             {story.status}
                           </span>
                         )}
+                        {story.isAdult && <AdultBadge />}
                       </div>
                       <p className="text-sm text-gray-500 line-clamp-1">{stripFormatting(story.content).substring(0, 100)}...</p>
                     </div>
@@ -833,6 +835,7 @@ export function ProfilePage() {
                         <span className="px-2 py-0.5 text-xs rounded bg-purple-900/30 text-purple-400">
                           draft
                         </span>
+                        {story.isAdult && <AdultBadge />}
                       </div>
                       <p className="text-sm text-gray-500 line-clamp-1">
                         {stripFormatting(story.content).substring(0, 100) || 'This draft does not contain any story text yet.'}
@@ -868,9 +871,12 @@ export function ProfilePage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h4 className="font-medium text-gray-200 group-hover:text-purple-300 transition-colors truncate mb-1">
-                        {story.title}
-                      </h4>
+                      <div className="mb-1 flex items-center gap-2">
+                        <h4 className="font-medium text-gray-200 group-hover:text-purple-300 transition-colors truncate">
+                          {story.title}
+                        </h4>
+                        {story.isAdult && <AdultBadge />}
+                      </div>
                       <div className="flex items-center gap-3 text-xs text-gray-500">
                         <span>by {story.authorName}</span>
                         <span className="px-1.5 py-0.5 bg-gray-800 rounded">{story.category}</span>

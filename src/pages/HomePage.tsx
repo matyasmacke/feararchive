@@ -5,6 +5,7 @@ import { getCategoryColor, getCategoryIcon } from '../types';
 import { getCategoryNames } from '../store/settings';
 import { IconDisplay } from '../components/IconDisplay';
 import { stripFormatting } from '../components/FormattedContent';
+import { AdultBadge } from '../components/AdultBadge';
 import type { Story, User } from '../types';
 import {
   BookOpen, Users, Heart, TrendingUp,
@@ -209,6 +210,7 @@ export function HomePage() {
                     <span className="text-xs text-gray-600 capitalize px-2 py-0.5 bg-gray-800/80 rounded">
                       {story.length}
                     </span>
+                    {story.isAdult && <AdultBadge />}
                   </div>
 
                   <h3 className="text-lg font-semibold text-gray-200 group-hover:text-purple-300 transition-colors mb-3 line-clamp-2">
@@ -279,6 +281,7 @@ export function HomePage() {
                         <Clock className="h-3 w-3" />
                         {new Date(story.createdAt).toLocaleDateString()}
                       </span>
+                      {story.isAdult && <AdultBadge />}
                     </div>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-gray-500 shrink-0">

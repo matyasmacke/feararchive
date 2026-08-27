@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { db } from '../store/db';
 import { useAuth } from '../store/AuthContext';
 import { LENGTH_LABELS } from '../types';
 import { getSettings, getCategoryNames } from '../store/settings';
 import type { StoryLength } from '../types';
-import { PenTool, CheckCircle, AlertCircle, Loader2, Save } from 'lucide-react';
+import { PenTool, CheckCircle, AlertCircle, Loader2, Save, ShieldAlert } from 'lucide-react';
 import { StoryRulesModal } from '../components/StoryRulesModal';
 import { FormattingEditor } from '../components/FormattingEditor';
 
@@ -20,6 +20,7 @@ export function AddStoryPage() {
   const categories = getCategoryNames();
   const [category, setCategory] = useState<string>(categories[0] || 'Horror');
   const [length, setLength] = useState<StoryLength>('medium');
+  const [isAdult, setIsAdult] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
@@ -28,6 +29,9 @@ export function AddStoryPage() {
   const [activeDraftId, setActiveDraftId] = useState<string | null>(requestedDraftId);
   const [draftLoading, setDraftLoading] = useState(Boolean(requestedDraftId));
   const [draftLoadError, setDraftLoadError] = useState('');
+  const [editorChanged, setEditorChanged] = useState(false);
+  const changeVersionRef = useRef(0);
+  const loadedDraftIdRef = useRef<string | null>(null);
   const hasAgreedBefore = user ? localStorage.getItem(`rules_agreed_${user.id}`) === 'true' : false;
   const [userStoryCount, setUserStoryCount] = useState<number | null>(null);
   const [showRules, setShowRules] = useState(false);
@@ -52,6 +56,10 @@ export function AddStoryPage() {
       setDraftLoading(false);
       return () => { active = false; };
     }
+    if (loadedDraftIdRef.current === requestedDraftId) {
+      setDraftLoading(false);
+      return () => { active = false; };
+    }
     const userId = user.id;
 
     setDraftLoading(true);
@@ -67,6 +75,9 @@ export function AddStoryPage() {
       setContent(story.content);
       setCategory(story.category);
       setLength(story.length);
+      setIsAdult(story.isAdult);
+      setEditorChanged(false);
+      loadedDraftIdRef.current = story.id;
     }).finally(() => {
       if (active) setDraftLoading(false);
     });
@@ -86,6 +97,7 @@ export function AddStoryPage() {
       authorName: user.username,
       category,
       length,
+      isAdult,
       status,
     } as const;
 
@@ -106,8 +118,8 @@ export function AddStoryPage() {
     }
   };
 
-  const handleSaveDraft = async () => {
-    if (!user) return;
+  const saveDraft = useCallback(async (automatic: boolean) => {
+    if (!user || submitting || savingDraft) return;
     setError('');
     setSavedMessage('');
     if (!title.trim() && !content.trim()) {
@@ -120,6 +132,7 @@ export function AddStoryPage() {
     }
 
     setSavingDraft(true);
+    const versionAtStart = changeVersionRef.current;
     try {
       const storyData = {
         title: title.trim(),
@@ -128,6 +141,7 @@ export function AddStoryPage() {
         authorName: user.username,
         category,
         length,
+        isAdult,
         status: 'draft' as const,
       };
       const saved = activeDraftId
@@ -135,16 +149,36 @@ export function AddStoryPage() {
         : await db.addStory(storyData);
       if (!saved) throw new Error('Draft could not be saved');
 
-      setTitle(saved.title);
-      setContent(saved.content);
+      const savedLatestVersion = changeVersionRef.current === versionAtStart;
+      if (savedLatestVersion) {
+        setTitle(saved.title);
+        setContent(saved.content);
+        setEditorChanged(false);
+        setSavedMessage(automatic
+          ? 'Draft saved automatically.'
+          : 'Draft saved. Only you and the moderation team can see it.');
+      }
       setActiveDraftId(saved.id);
-      setSavedMessage('Draft saved. Only you and the moderation team can see it.');
+      loadedDraftIdRef.current = saved.id;
       if (!activeDraftId) navigate(`/add-story?draft=${saved.id}`, { replace: true });
     } catch {
-      setError('Failed to save the draft. Make sure the Supabase draft migration has been applied.');
+      if (changeVersionRef.current === versionAtStart) setEditorChanged(false);
+      setError(automatic
+        ? 'Automatic draft save failed. Your text is still in the editor.'
+        : 'Failed to save the draft. Make sure the Supabase draft migration has been applied.');
     } finally {
       setSavingDraft(false);
     }
+  }, [activeDraftId, category, content, isAdult, length, navigate, savingDraft, settings.maxStoryLength, submitting, title, user]);
+
+  const handleSaveDraft = () => {
+    void saveDraft(false);
+  };
+
+  const markEditorChanged = () => {
+    changeVersionRef.current += 1;
+    setEditorChanged(true);
+    setSavedMessage('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -162,6 +196,23 @@ export function AddStoryPage() {
     }
     await publishStory();
   };
+
+  useEffect(() => {
+    if (
+      !editorChanged
+      || draftLoading
+      || submitting
+      || savingDraft
+      || (!title.trim() && !content.trim())
+      || content.trim().length > settings.maxStoryLength
+    ) return;
+
+    const timeoutId = window.setTimeout(() => {
+      void saveDraft(true);
+    }, 2000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [content, draftLoading, editorChanged, saveDraft, savingDraft, settings.maxStoryLength, submitting, title]);
 
   if (!user) return (
     <div className="min-h-screen flex items-center justify-center px-4"><div className="text-center">
@@ -217,7 +268,7 @@ export function AddStoryPage() {
       <h2 className="text-2xl font-bold text-white mb-3">{requiresApproval ? 'Story Submitted!' : 'Story Published!'}</h2>
       <p className="text-gray-400 mb-6 leading-relaxed">{requiresApproval ? "Your story has been submitted and is waiting for approval." : "Your story has been published!"}</p>
       <div className="flex gap-3 justify-center">
-        <button onClick={() => { setSubmitted(false); setTitle(''); setContent(''); setActiveDraftId(null); navigate('/add-story', { replace: true }); }} className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors text-sm font-medium">Write Another</button>
+        <button onClick={() => { setSubmitted(false); setTitle(''); setContent(''); setIsAdult(false); setActiveDraftId(null); setEditorChanged(false); loadedDraftIdRef.current = null; navigate('/add-story', { replace: true }); }} className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors text-sm font-medium">Write Another</button>
         <button onClick={() => navigate('/stories')} className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors text-sm font-medium">View Stories</button>
       </div>
     </div></div>
@@ -233,11 +284,24 @@ export function AddStoryPage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (<div className="flex items-center gap-2 px-4 py-3 bg-red-900/20 border border-red-800/40 rounded-lg text-red-400 text-sm animate-slide-down"><AlertCircle className="h-4 w-4 shrink-0" /> {error}</div>)}
         {savedMessage && (<div className="flex items-center gap-2 px-4 py-3 bg-green-900/20 border border-green-800/40 rounded-lg text-green-400 text-sm animate-slide-down"><CheckCircle className="h-4 w-4 shrink-0" /> {savedMessage}</div>)}
-        <div><label className="block text-sm font-medium text-gray-300 mb-2">Title</label><input type="text" value={title} onChange={e => { setTitle(e.target.value); setSavedMessage(''); }} placeholder="Enter your story title..." className="w-full px-4 py-3 bg-gray-900/80 border border-purple-900/30 rounded-xl text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-all" maxLength={200} /></div>
+        <div><label className="block text-sm font-medium text-gray-300 mb-2">Title</label><input type="text" value={title} onChange={e => { setTitle(e.target.value); markEditorChanged(); }} placeholder="Enter your story title..." className="w-full px-4 py-3 bg-gray-900/80 border border-purple-900/30 rounded-xl text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-all" maxLength={200} /></div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div><label className="block text-sm font-medium text-gray-300 mb-2">Category</label><select value={category} onChange={e => setCategory(e.target.value)} className="w-full px-4 py-3 bg-gray-900/80 border border-purple-900/30 rounded-xl text-gray-200 focus:outline-none focus:border-purple-500/50 cursor-pointer">{categories.map(c => (<option key={c} value={c}>{c}</option>))}</select></div>
-          <div><label className="block text-sm font-medium text-gray-300 mb-2">Story Length</label><select value={length} onChange={e => setLength(e.target.value as StoryLength)} className="w-full px-4 py-3 bg-gray-900/80 border border-purple-900/30 rounded-xl text-gray-200 focus:outline-none focus:border-purple-500/50 cursor-pointer">{(Object.entries(LENGTH_LABELS) as [StoryLength, string][]).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}</select></div>
+          <div><label className="block text-sm font-medium text-gray-300 mb-2">Category</label><select value={category} onChange={e => { setCategory(e.target.value); markEditorChanged(); }} className="w-full px-4 py-3 bg-gray-900/80 border border-purple-900/30 rounded-xl text-gray-200 focus:outline-none focus:border-purple-500/50 cursor-pointer">{categories.map(c => (<option key={c} value={c}>{c}</option>))}</select></div>
+          <div><label className="block text-sm font-medium text-gray-300 mb-2">Story Length</label><select value={length} onChange={e => { setLength(e.target.value as StoryLength); markEditorChanged(); }} className="w-full px-4 py-3 bg-gray-900/80 border border-purple-900/30 rounded-xl text-gray-200 focus:outline-none focus:border-purple-500/50 cursor-pointer">{(Object.entries(LENGTH_LABELS) as [StoryLength, string][]).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}</select></div>
         </div>
+        <label className={`flex cursor-pointer items-start gap-4 rounded-xl border p-4 transition-all ${isAdult ? 'border-red-700/50 bg-red-950/30' : 'border-purple-900/30 bg-gray-900/50 hover:border-purple-700/40'}`}>
+          <input
+            type="checkbox"
+            checked={isAdult}
+            onChange={e => { setIsAdult(e.target.checked); markEditorChanged(); }}
+            className="mt-1 h-4 w-4 shrink-0 accent-red-600"
+          />
+          <ShieldAlert className={`mt-0.5 h-5 w-5 shrink-0 ${isAdult ? 'text-red-400' : 'text-gray-500'}`} />
+          <span className="min-w-0">
+            <span className={`block text-sm font-semibold ${isAdult ? 'text-red-300' : 'text-gray-300'}`}>18+ content</span>
+            <span className="mt-1 block text-xs leading-relaxed text-gray-500">Mark this story as intended only for adults. Readers will see a warning before the story opens.</span>
+          </span>
+        </label>
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">
             Your Story
@@ -247,7 +311,7 @@ export function AddStoryPage() {
           </label>
           <FormattingEditor
             value={content}
-            onChange={value => { setContent(value); setSavedMessage(''); }}
+            onChange={value => { setContent(value); markEditorChanged(); }}
             placeholder="It was a dark and stormy night..."
             rows={16}
             allowLinks={false}
@@ -255,7 +319,7 @@ export function AddStoryPage() {
           />
         </div>
         <div className="flex flex-col gap-4 pt-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-gray-600">Drafts stay private. {requiresApproval ? 'Submitted stories are reviewed before publishing.' : 'Published stories become visible immediately.'}</p>
+          <p className="text-xs text-gray-600">Changes are saved automatically after 2 seconds of inactivity. Drafts stay private. {requiresApproval ? 'Submitted stories are reviewed before publishing.' : 'Published stories become visible immediately.'}</p>
           <div className="flex flex-wrap gap-3 sm:justify-end">
             <button type="button" onClick={handleSaveDraft} disabled={savingDraft || submitting} className="flex items-center gap-2 px-5 py-3 bg-gray-800 hover:bg-gray-700 border border-purple-900/30 text-gray-200 font-medium rounded-xl transition-all disabled:opacity-60">
               {savingDraft ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 text-purple-400" />}

@@ -9,7 +9,7 @@ import { FormattedContent } from '../components/FormattedContent';
 import type { Story } from '../types';
 import {
   Heart, Clock, ArrowLeft, BookOpen, User, Trash2,
-  CheckCircle, XCircle, Shield, AlertTriangle, Edit3,
+  CheckCircle, XCircle, Shield, AlertTriangle, Edit3, ShieldAlert,
 } from 'lucide-react';
 
 export function StoryDetailPage() {
@@ -17,6 +17,7 @@ export function StoryDetailPage() {
   const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [story, setStory] = useState<Story | null>(null);
+  const [adultWarningAccepted, setAdultWarningAccepted] = useState(false);
   const [liked, setLiked] = useState(false);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
   const { confirm, dialogProps } = useConfirmDialog();
@@ -30,6 +31,7 @@ export function StoryDetailPage() {
 
   useEffect(() => {
     if (!id) return;
+    setAdultWarningAccepted(false);
     db.getStoryById(id).then(s => {
       if (s) {
         setStory(s);
@@ -130,6 +132,37 @@ export function StoryDetailPage() {
     );
   }
 
+  if (story.isAdult && !adultWarningAccepted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-lg rounded-2xl border border-red-900/50 bg-gradient-to-br from-gray-950 to-red-950/30 p-7 text-center shadow-2xl shadow-red-950/30 sm:p-10">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-red-800/50 bg-red-950/50">
+            <ShieldAlert className="h-10 w-10 text-red-400" />
+          </div>
+          <span className="mb-3 inline-flex rounded-lg border border-red-800/50 bg-red-900/30 px-3 py-1 text-sm font-bold text-red-300">18+</span>
+          <h1 className="mb-4 text-2xl font-bold text-white sm:text-3xl">Adult Content Warning</h1>
+          <p className="mx-auto mb-8 max-w-md leading-relaxed text-gray-400">
+            This story is marked as 18+ and may contain content intended only for adult readers. Do you want to continue?
+          </p>
+          <div className="flex flex-col-reverse justify-center gap-3 sm:flex-row">
+            <button
+              onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/stories')}
+              className="flex items-center justify-center gap-2 rounded-xl border border-purple-900/30 bg-gray-900 px-6 py-3 font-medium text-gray-300 transition-all hover:bg-gray-800 hover:text-white"
+            >
+              <ArrowLeft className="h-4 w-4" /> Go Back
+            </button>
+            <button
+              onClick={() => setAdultWarningAccepted(true)}
+              className="rounded-xl bg-gradient-to-r from-red-700 to-red-800 px-6 py-3 font-semibold text-white shadow-lg shadow-red-950/30 transition-all hover:from-red-600 hover:to-red-700"
+            >
+              Continue to Story
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const catColor = getCategoryColor(story.category);
   const readTime = story.length === 'short' ? '< 5 min' : story.length === 'medium' ? '5-15 min' : '15+ min';
 
@@ -217,6 +250,11 @@ export function StoryDetailPage() {
             <span className="px-3 py-1 bg-gray-800/80 text-gray-400 text-sm rounded-lg capitalize">
               {LENGTH_LABELS[story.length]}
             </span>
+            {story.isAdult && (
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-red-800/50 bg-red-900/30 px-3 py-1 text-sm font-bold text-red-300">
+                <ShieldAlert className="h-3.5 w-3.5" /> 18+
+              </span>
+            )}
             {/* Status badge visible to mods or author */}
             {(canModerate || isAuthor) && (
               <span className={`px-3 py-1 ${stStatus.bg} ${stStatus.text} text-sm rounded-lg border ${stStatus.border} capitalize flex items-center gap-1.5`}>

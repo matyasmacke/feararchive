@@ -5,6 +5,7 @@ import { LENGTH_LABELS, getCategoryColor, getCategoryIcon } from '../types';
 import { getSettings, getCategoryNames } from '../store/settings';
 import { IconDisplay } from '../components/IconDisplay';
 import { stripFormatting } from '../components/FormattedContent';
+import { AdultBadge } from '../components/AdultBadge';
 import type { Story, StoryLength } from '../types';
 import { Search, Heart, Clock, BookOpen, Filter, X, ChevronDown } from 'lucide-react';
 
@@ -245,10 +246,13 @@ export function StoriesPage() {
                 >
                   <div className="h-full bg-gradient-to-br from-gray-900 to-gray-900/50 border border-purple-900/20 rounded-xl p-6 transition-all duration-300 hover:border-purple-700/40 hover:shadow-lg hover:shadow-purple-900/20 hover:-translate-y-1">
                     <div className="flex items-start justify-between gap-2 mb-3">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${catColor.bg} ${catColor.text} text-xs font-medium rounded-lg border ${catColor.border}`}>
-                        {catIcon ? <IconDisplay icon={catIcon} /> : <span className={`h-1.5 w-1.5 rounded-full ${catColor.dot}`} />}
-                        {story.category}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${catColor.bg} ${catColor.text} text-xs font-medium rounded-lg border ${catColor.border}`}>
+                          {catIcon ? <IconDisplay icon={catIcon} /> : <span className={`h-1.5 w-1.5 rounded-full ${catColor.dot}`} />}
+                          {story.category}
+                        </span>
+                        {story.isAdult && <AdultBadge />}
+                      </div>
                       {settings.showLikeCount && (
                         <div className="flex items-center gap-1 text-gray-500 text-xs">
                           <Heart className="h-3.5 w-3.5" />
