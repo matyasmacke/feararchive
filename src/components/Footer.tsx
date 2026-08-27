@@ -144,7 +144,7 @@ export function Footer() {
           {/* Socials / Info */}
           <div>
             <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">
-              Follow Us
+              Follow Me
             </h3>
             <div className="space-y-3">
               <a
