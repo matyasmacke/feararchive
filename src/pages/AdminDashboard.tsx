@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { db } from '../store/db';
 import { useAuth } from '../store/AuthContext';
 import { ConfirmDialog, useConfirmDialog } from '../components/ConfirmDialog';
-import type { User, Story, UserRole, ApprovalStatus, ModApplication } from '../types';
+import type { User, Story, UserRole, ApprovalStatus, StoryStatus, ModApplication } from '../types';
 import {
   LayoutDashboard, BookOpen, Users, CheckCircle, XCircle,
   Trash2, Shield, Clock, Eye, BarChart3, AlertTriangle, Edit3,
@@ -16,7 +16,7 @@ export function AdminDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const [tab, setTab] = useState<Tab>('overview');
-  const [storyFilter, setStoryFilter] = useState<ApprovalStatus | 'all'>('pending');
+  const [storyFilter, setStoryFilter] = useState<StoryStatus | 'all'>('pending');
   const [userFilter, setUserFilter] = useState<ApprovalStatus | 'all'>('pending');
   const [refresh, setRefresh] = useState(0);
   const [allStories, setAllStories] = useState<Story[]>([]);
@@ -294,7 +294,7 @@ export function AdminDashboard() {
         {tab === 'stories' && (
           <div className="animate-fade-in">
             <div className="flex flex-wrap items-center gap-2 mb-6">
-              {(['all', 'pending', 'approved', 'rejected'] as const).map(f => (
+              {(['all', 'draft', 'pending', 'approved', 'rejected'] as const).map(f => (
                 <button
                   key={f}
                   onClick={() => setStoryFilter(f)}
@@ -521,7 +521,8 @@ function StoryRow({ story, isAdmin, onApprove, onReject, onDelete, onView }: {
   onDelete: () => void;
   onView: () => void;
 }) {
-  const statusColors: Record<ApprovalStatus, string> = {
+  const statusColors: Record<StoryStatus, string> = {
+    draft: 'bg-purple-900/30 text-purple-400 border-purple-800/40',
     pending: 'bg-yellow-900/30 text-yellow-400 border-yellow-800/40',
     approved: 'bg-green-900/30 text-green-400 border-green-800/40',
     rejected: 'bg-red-900/30 text-red-400 border-red-800/40',
@@ -531,7 +532,7 @@ function StoryRow({ story, isAdmin, onApprove, onReject, onDelete, onView }: {
     <div className="bg-gray-900/50 border border-purple-900/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <h4 className="font-medium text-gray-200 truncate">{story.title}</h4>
+          <h4 className="font-medium text-gray-200 truncate">{story.title || 'Untitled Draft'}</h4>
           <span className={`px-2 py-0.5 text-xs rounded-lg border capitalize ${statusColors[story.status]}`}>
             {story.status}
           </span>
@@ -548,12 +549,12 @@ function StoryRow({ story, isAdmin, onApprove, onReject, onDelete, onView }: {
         <button onClick={onView} className="p-2 rounded-lg bg-gray-800 text-gray-400 hover:text-purple-300 hover:bg-gray-700 transition-all" title="View">
           <Eye className="h-4 w-4" />
         </button>
-        {story.status !== 'approved' && (
+        {story.status !== 'draft' && story.status !== 'approved' && (
           <button onClick={onApprove} className="p-2 rounded-lg bg-green-900/20 text-green-400 hover:bg-green-900/40 transition-all" title="Approve">
             <CheckCircle className="h-4 w-4" />
           </button>
         )}
-        {story.status !== 'rejected' && (
+        {story.status !== 'draft' && story.status !== 'rejected' && (
           <button onClick={onReject} className="p-2 rounded-lg bg-red-900/20 text-red-400 hover:bg-red-900/40 transition-all" title="Reject">
             <XCircle className="h-4 w-4" />
           </button>

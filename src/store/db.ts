@@ -53,6 +53,7 @@ function toStory(row: Record<string, unknown>): Story {
     likes: (row.likes as number) || 0,
     likedBy: (row.liked_by as string[]) || [],
     createdAt: row.created_at as string,
+    updatedAt: (row.updated_at as string) || (row.created_at as string),
   };
 }
 
@@ -225,7 +226,17 @@ class Database {
     return (data || []).map(toStory);
   }
 
-  async addStory(story: Omit<Story, 'id' | 'createdAt' | 'likes' | 'likedBy'>): Promise<Story> {
+  async getDraftStoriesByAuthor(authorId: string): Promise<Story[]> {
+    const { data } = await supabase
+      .from('stories')
+      .select('*')
+      .eq('author_id', authorId)
+      .eq('status', 'draft')
+      .order('updated_at', { ascending: false });
+    return (data || []).map(toStory);
+  }
+
+  async addStory(story: Omit<Story, 'id' | 'createdAt' | 'updatedAt' | 'likes' | 'likedBy'>): Promise<Story> {
     const { data, error } = await supabase
       .from('stories')
       .insert({

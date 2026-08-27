@@ -9,7 +9,7 @@ import { FormattedContent } from '../components/FormattedContent';
 import type { Story } from '../types';
 import {
   Heart, Clock, ArrowLeft, BookOpen, User, Trash2,
-  CheckCircle, XCircle, Shield, AlertTriangle,
+  CheckCircle, XCircle, Shield, AlertTriangle, Edit3,
 } from 'lucide-react';
 
 export function StoryDetailPage() {
@@ -140,6 +140,7 @@ export function StoryDetailPage() {
   const canModerate = isMod;
 
   const statusConfig: Record<string, { bg: string; text: string; border: string; label: string }> = {
+    draft: { bg: 'bg-purple-900/20', text: 'text-purple-400', border: 'border-purple-800/40', label: 'Private Draft' },
     pending: { bg: 'bg-yellow-900/20', text: 'text-yellow-400', border: 'border-yellow-800/40', label: 'Pending Review' },
     approved: { bg: 'bg-green-900/20', text: 'text-green-400', border: 'border-green-800/40', label: 'Approved' },
     rejected: { bg: 'bg-red-900/20', text: 'text-red-400', border: 'border-red-800/40', label: 'Rejected' },
@@ -168,10 +169,14 @@ export function StoryDetailPage() {
             <div className="flex items-center gap-2">
               <AlertTriangle className={`h-4 w-4 ${stStatus.text}`} />
               <span className={`text-sm font-medium ${stStatus.text}`}>
-                {story.status === 'pending' ? 'This story is pending review' : 'This story has been rejected'}
+                {story.status === 'draft'
+                  ? 'This is a private draft and has not been submitted'
+                  : story.status === 'pending'
+                    ? 'This story is pending review'
+                    : 'This story has been rejected'}
               </span>
             </div>
-            {canModerate && (
+            {canModerate && story.status !== 'draft' && (
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleApprove}
@@ -222,7 +227,7 @@ export function StoryDetailPage() {
           </div>
 
           <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            {story.title}
+            {story.title || 'Untitled Draft'}
           </h1>
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400">
@@ -251,25 +256,30 @@ export function StoryDetailPage() {
 
       {/* Content */}
       <div className="max-w-3xl mx-auto px-4 py-10">
-        <FormattedContent
-          content={story.content}
-          allowLinks={false}
-          className="story-content text-base text-gray-300 md:text-lg"
-        />
+        {story.content ? (
+          <FormattedContent
+            content={story.content}
+            allowLinks={false}
+            className="story-content text-base text-gray-300 md:text-lg"
+          />
+        ) : (
+          <p className="text-gray-600 italic">This draft does not contain any story text yet.</p>
+        )}
 
         {/* Actions bar */}
         <div className="mt-12 pt-8 border-t border-purple-900/30">
           <div className="flex flex-wrap items-center justify-between gap-4">
             {/* Left: Like + browse */}
             <div className="flex items-center gap-3">
-              <button
-                onClick={user ? handleLike : () => navigate('/login')}
-                className={`relative flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all ${
-                  liked
-                    ? 'bg-red-900/30 border border-red-700/50 text-red-400 shadow-lg shadow-red-900/20'
-                    : 'bg-gray-900 border border-purple-900/30 text-gray-400 hover:text-red-400 hover:border-red-800/50'
-                }`}
-              >
+              {story.status === 'approved' && (
+                <button
+                  onClick={user ? handleLike : () => navigate('/login')}
+                  className={`relative flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all ${
+                    liked
+                      ? 'bg-red-900/30 border border-red-700/50 text-red-400 shadow-lg shadow-red-900/20'
+                      : 'bg-gray-900 border border-purple-900/30 text-gray-400 hover:text-red-400 hover:border-red-800/50'
+                  }`}
+                >
                 {/* Particles */}
                 {showParticles && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -287,13 +297,14 @@ export function StoryDetailPage() {
                     +1
                   </span>
                 )}
-                <Heart className={`h-5 w-5 transition-transform ${liked ? 'fill-red-400' : ''} ${likeAnim === 'bounce' ? 'like-bounce' : ''} ${likeAnim === 'unbounce' ? 'like-unbounce' : ''}`} />
-                {settings.showLikeCount ? (
-                  <>{story.likes} {story.likes === 1 ? 'Like' : 'Likes'}</>
-                ) : (
-                  liked ? 'Liked' : 'Like'
-                )}
-              </button>
+                  <Heart className={`h-5 w-5 transition-transform ${liked ? 'fill-red-400' : ''} ${likeAnim === 'bounce' ? 'like-bounce' : ''} ${likeAnim === 'unbounce' ? 'like-unbounce' : ''}`} />
+                  {settings.showLikeCount ? (
+                    <>{story.likes} {story.likes === 1 ? 'Like' : 'Likes'}</>
+                  ) : (
+                    liked ? 'Liked' : 'Like'
+                  )}
+                </button>
+              )}
 
               <Link
                 to="/stories"
@@ -305,6 +316,14 @@ export function StoryDetailPage() {
 
             {/* Right: Moderation & Author actions */}
             <div className="flex items-center gap-2">
+              {isAuthor && story.status === 'draft' && (
+                <Link
+                  to={`/add-story?draft=${story.id}`}
+                  className="flex items-center gap-1.5 px-4 py-2.5 bg-purple-900/20 border border-purple-800/40 text-purple-300 hover:bg-purple-900/40 rounded-xl text-sm font-medium transition-all"
+                >
+                  <Edit3 className="h-4 w-4" /> Continue Writing
+                </Link>
+              )}
               {/* Moderation buttons for mods/admins */}
               {canModerate && story.status === 'approved' && (
                 <button

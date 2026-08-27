@@ -1,5 +1,6 @@
 export type UserRole = 'user' | 'moderator' | 'admin';
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+export type StoryStatus = ApprovalStatus | 'draft';
 export type StoryLength = 'short' | 'medium' | 'long';
 
 export interface ChangelogEntry {
@@ -51,8 +52,9 @@ export interface Story {
   authorName: string;
   category: string;
   length: StoryLength;
-  status: ApprovalStatus;
+  status: StoryStatus;
   createdAt: string;
+  updatedAt: string;
   likes: number;
   likedBy: string[];
 }

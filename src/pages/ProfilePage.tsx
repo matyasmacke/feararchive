@@ -9,10 +9,10 @@ import type { User, Story } from '../types';
 import {
   User as UserIcon, Edit3, Save, X, BookOpen, Heart,
   Calendar, Shield, Clock, AlertCircle, Camera, Upload,
-  Check, Trash2, ExternalLink,
+  Check, Trash2, ExternalLink, FileText,
 } from 'lucide-react';
 
-type ProfileTab = 'stories' | 'liked';
+type ProfileTab = 'stories' | 'drafts' | 'liked';
 
 export function ProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +25,7 @@ export function ProfilePage() {
     isOwnProfile ? (currentUser ?? undefined) : undefined
   );
   const [userStories, setUserStories] = useState<Story[]>([]);
+  const [draftStories, setDraftStories] = useState<Story[]>([]);
   const [likedStories, setLikedStories] = useState<Story[]>([]);
   const [profileLoading, setProfileLoading] = useState(true);
   const [dataVersion, setDataVersion] = useState(0);
@@ -41,6 +42,7 @@ export function ProfilePage() {
     if (!targetId) {
       setProfileUser(undefined);
       setUserStories([]);
+      setDraftStories([]);
       setLikedStories([]);
       setProfileLoading(false);
       return () => { active = false; };
@@ -53,16 +55,23 @@ export function ProfilePage() {
       setProfileUser(profile);
       if (!profile) {
         setUserStories([]);
+        setDraftStories([]);
         setLikedStories([]);
         return;
       }
 
-      const [authored, approved] = await Promise.all([
+      const [authored, approved, drafts] = await Promise.all([
         db.getStoriesByAuthor(profile.id),
         db.getApprovedStories(),
+        db.getDraftStoriesByAuthor(profile.id),
       ]);
       if (!active) return;
-      setUserStories(isOwnProfile ? authored : authored.filter(s => s.status === 'approved'));
+      const staffCanViewDrafts = currentUser?.role === 'admin' || currentUser?.role === 'moderator';
+      const canViewPrivateDrafts = currentUser?.id === profile.id || staffCanViewDrafts;
+      setUserStories(isOwnProfile
+        ? authored.filter(s => s.status !== 'draft')
+        : authored.filter(s => s.status === 'approved'));
+      setDraftStories(canViewPrivateDrafts ? drafts : []);
       setLikedStories(!isOwnProfile && profile.hideLikedStories
         ? []
         : approved.filter(s => profile.likedStories.includes(s.id)));
@@ -84,6 +93,15 @@ export function ProfilePage() {
   const [youtubeError, setYoutubeError] = useState('');
   const [instagramError, setInstagramError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const canViewDrafts = Boolean(
+    profileUser
+    && currentUser
+    && (currentUser.id === profileUser.id || currentUser.role === 'admin' || currentUser.role === 'moderator')
+  );
+
+  useEffect(() => {
+    if (activeTab === 'drafts' && !canViewDrafts) setActiveTab('stories');
+  }, [activeTab, canViewDrafts]);
 
   // Image cropper state
   const [cropperImage, setCropperImage] = useState<string | null>(null);
@@ -706,7 +724,7 @@ export function ProfilePage() {
 
       {/* Content tabs */}
       <div className="max-w-3xl mx-auto px-4 py-8">
-        <div className="flex gap-1 mb-6 bg-gray-900/50 rounded-xl p-1 border border-purple-900/20 w-fit">
+        <div className="flex flex-wrap gap-1 mb-6 bg-gray-900/50 rounded-xl p-1 border border-purple-900/20 w-full sm:w-fit">
           <button
             onClick={() => setActiveTab('stories')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -716,6 +734,17 @@ export function ProfilePage() {
             <BookOpen className="h-4 w-4" />
             {isOwnProfile ? 'My Stories' : 'Stories'} ({userStories.length})
           </button>
+          {canViewDrafts && (
+            <button
+              onClick={() => setActiveTab('drafts')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                activeTab === 'drafts' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-gray-300'
+              }`}
+            >
+              <FileText className="h-4 w-4" />
+              Drafts ({draftStories.length})
+            </button>
+          )}
           {(!profileUser.hideLikedStories || isOwnProfile) && (
             <button
               onClick={() => setActiveTab('liked')}
@@ -768,6 +797,50 @@ export function ProfilePage() {
                     </div>
                     <div className="flex items-center gap-1 text-xs text-gray-500 shrink-0">
                       <Heart className="h-3 w-3" /> {story.likes}
+                    </div>
+                  </div>
+                </Link>
+              ))
+            )}
+          </div>
+        )}
+
+        {activeTab === 'drafts' && canViewDrafts && (
+          <div className="space-y-3 animate-fade-in">
+            {draftStories.length === 0 ? (
+              <div className="text-center py-16">
+                <FileText className="h-12 w-12 text-gray-700 mx-auto mb-3" />
+                <p className="text-gray-500">No draft stories yet.</p>
+                {isOwnProfile && (
+                  <Link to="/add-story" className="inline-block mt-3 text-sm text-purple-400 hover:text-purple-300">
+                    Start a new draft →
+                  </Link>
+                )}
+              </div>
+            ) : (
+              draftStories.map(story => (
+                <Link
+                  key={story.id}
+                  to={isOwnProfile ? `/add-story?draft=${story.id}` : `/story/${story.id}`}
+                  className="block bg-gray-900/50 border border-purple-900/20 rounded-xl p-4 hover:border-purple-700/40 transition-all group"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h4 className="font-medium text-gray-200 group-hover:text-purple-300 transition-colors truncate">
+                          {story.title || 'Untitled Draft'}
+                        </h4>
+                        <span className="px-2 py-0.5 text-xs rounded bg-purple-900/30 text-purple-400">
+                          draft
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-500 line-clamp-1">
+                        {stripFormatting(story.content).substring(0, 100) || 'This draft does not contain any story text yet.'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-gray-600 shrink-0">
+                      <Clock className="h-3 w-3" />
+                      Edited {new Date(story.updatedAt).toLocaleDateString()}
                     </div>
                   </div>
                 </Link>
