@@ -6,10 +6,11 @@ import { LENGTH_LABELS, getCategoryColor } from '../types';
 import { getSettings } from '../store/settings';
 import { ConfirmDialog, useConfirmDialog } from '../components/ConfirmDialog';
 import { FormattedContent } from '../components/FormattedContent';
+import { normalizeExternalHttpUrl } from '../utils/externalUrl';
 import type { Story } from '../types';
 import {
   Heart, Clock, ArrowLeft, BookOpen, User, Trash2,
-  CheckCircle, XCircle, Shield, AlertTriangle, Edit3, ShieldAlert,
+  CheckCircle, XCircle, Shield, AlertTriangle, Edit3, ShieldAlert, ExternalLink,
 } from 'lucide-react';
 
 export function StoryDetailPage() {
@@ -39,6 +40,16 @@ export function StoryDetailPage() {
       }
     });
   }, [id, user]);
+
+  useEffect(() => {
+    if (!story?.isAdult || adultWarningAccepted) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [adultWarningAccepted, story?.isAdult]);
 
   const handleLike = async () => {
     if (!user || !story) return;
@@ -134,26 +145,26 @@ export function StoryDetailPage() {
 
   if (story.isAdult && !adultWarningAccepted) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-lg rounded-2xl border border-red-900/50 bg-gradient-to-br from-gray-950 to-red-950/30 p-7 text-center shadow-2xl shadow-red-950/30 sm:p-10">
-          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-red-800/50 bg-red-950/50">
-            <ShieldAlert className="h-10 w-10 text-red-400" />
+      <div className="flex h-[calc(100dvh-4rem)] items-center justify-center overflow-hidden px-4 py-4 sm:py-6">
+        <div className="w-full max-w-lg rounded-2xl border border-red-900/50 bg-gradient-to-br from-gray-950 to-red-950/30 p-5 text-center shadow-2xl shadow-red-950/30 sm:p-8">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-red-800/50 bg-red-950/50 sm:mb-5 sm:h-20 sm:w-20">
+            <ShieldAlert className="h-8 w-8 text-red-400 sm:h-10 sm:w-10" />
           </div>
           <span className="mb-3 inline-flex rounded-lg border border-red-800/50 bg-red-900/30 px-3 py-1 text-sm font-bold text-red-300">18+</span>
-          <h1 className="mb-4 text-2xl font-bold text-white sm:text-3xl">Adult Content Warning</h1>
-          <p className="mx-auto mb-8 max-w-md leading-relaxed text-gray-400">
+          <h1 className="mb-3 text-2xl font-bold text-white sm:mb-4 sm:text-3xl">Adult Content Warning</h1>
+          <p className="mx-auto mb-5 max-w-md text-sm leading-relaxed text-gray-400 sm:mb-7 sm:text-base">
             This story is marked as 18+ and may contain content intended only for adult readers. Do you want to continue?
           </p>
-          <div className="flex flex-col-reverse justify-center gap-3 sm:flex-row">
+          <div className="flex flex-row justify-center gap-3">
             <button
               onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/stories')}
-              className="flex items-center justify-center gap-2 rounded-xl border border-purple-900/30 bg-gray-900 px-6 py-3 font-medium text-gray-300 transition-all hover:bg-gray-800 hover:text-white"
+              className="flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-purple-900/30 bg-gray-900 px-3 py-3 text-sm font-medium text-gray-300 transition-all hover:bg-gray-800 hover:text-white sm:flex-none sm:px-6 sm:text-base"
             >
               <ArrowLeft className="h-4 w-4" /> Go Back
             </button>
             <button
               onClick={() => setAdultWarningAccepted(true)}
-              className="rounded-xl bg-gradient-to-r from-red-700 to-red-800 px-6 py-3 font-semibold text-white shadow-lg shadow-red-950/30 transition-all hover:from-red-600 hover:to-red-700"
+              className="flex-1 whitespace-nowrap rounded-xl bg-gradient-to-r from-red-700 to-red-800 px-3 py-3 text-sm font-semibold text-white shadow-lg shadow-red-950/30 transition-all hover:from-red-600 hover:to-red-700 sm:flex-none sm:px-6 sm:text-base"
             >
               Continue to Story
             </button>
@@ -165,6 +176,7 @@ export function StoryDetailPage() {
 
   const catColor = getCategoryColor(story.category);
   const readTime = story.length === 'short' ? '< 5 min' : story.length === 'medium' ? '5-15 min' : '15+ min';
+  const safeSourceUrl = normalizeExternalHttpUrl(story.sourceUrl || '');
 
   const isAuthor = user && user.id === story.authorId;
   const isMod = user && (user.role === 'moderator' || user.role === 'admin');
@@ -302,6 +314,22 @@ export function StoryDetailPage() {
           />
         ) : (
           <p className="text-gray-600 italic">This draft does not contain any story text yet.</p>
+        )}
+
+        {safeSourceUrl && (
+          <div className="mt-10 rounded-xl border border-purple-900/30 bg-gray-900/50 p-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-600">Source</p>
+            <a
+              href={safeSourceUrl}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              referrerPolicy="no-referrer"
+              className="inline-flex max-w-full items-start gap-2 text-sm text-purple-400 transition-colors hover:text-purple-300"
+            >
+              <ExternalLink className="mt-0.5 h-4 w-4 shrink-0" />
+              <span className="break-all underline decoration-purple-700/60 underline-offset-4">{safeSourceUrl}</span>
+            </a>
+          </div>
         )}
 
         {/* Actions bar */}

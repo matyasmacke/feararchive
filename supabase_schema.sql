@@ -33,6 +33,7 @@ create table if not exists public.stories (
   length text not null check (length in ('short', 'medium', 'long')),
   status text not null default 'pending',
   is_adult boolean not null default false,
+  source_url text,
   likes integer not null default 0 check (likes >= 0),
   liked_by text[] not null default '{}',
   created_at timestamptz not null default now(),
@@ -43,22 +44,30 @@ create table if not exists public.stories (
   constraint stories_content_check check (
     status = 'draft' or char_length(content) >= 50
   ),
+  constraint stories_source_url_check check (
+    source_url is null or (char_length(source_url) <= 2048 and source_url ~* '^https?://[^[:space:]]+$')
+  ),
   constraint stories_status_check check (status in ('draft', 'pending', 'approved', 'rejected'))
 );
 
 -- Keep rerunning this schema safe for projects created before draft support.
 alter table public.stories add column if not exists updated_at timestamptz not null default now();
 alter table public.stories add column if not exists is_adult boolean not null default false;
+alter table public.stories add column if not exists source_url text;
 alter table public.stories alter column title set default '';
 alter table public.stories alter column content set default '';
 alter table public.stories drop constraint if exists stories_title_check;
 alter table public.stories drop constraint if exists stories_content_check;
+alter table public.stories drop constraint if exists stories_source_url_check;
 alter table public.stories drop constraint if exists stories_status_check;
 alter table public.stories add constraint stories_title_check check (
   char_length(title) <= 200 and (status = 'draft' or char_length(title) >= 1)
 );
 alter table public.stories add constraint stories_content_check check (
   status = 'draft' or char_length(content) >= 50
+);
+alter table public.stories add constraint stories_source_url_check check (
+  source_url is null or (char_length(source_url) <= 2048 and source_url ~* '^https?://[^[:space:]]+$')
 );
 alter table public.stories add constraint stories_status_check
   check (status in ('draft', 'pending', 'approved', 'rejected'));

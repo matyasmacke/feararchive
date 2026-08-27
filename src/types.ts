@@ -54,6 +54,7 @@ export interface Story {
   length: StoryLength;
   status: StoryStatus;
   isAdult: boolean;
+  sourceUrl?: string;
   createdAt: string;
   updatedAt: string;
   likes: number;

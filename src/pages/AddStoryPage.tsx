@@ -5,9 +5,10 @@ import { useAuth } from '../store/AuthContext';
 import { LENGTH_LABELS } from '../types';
 import { getSettings, getCategoryNames } from '../store/settings';
 import type { StoryLength } from '../types';
-import { PenTool, CheckCircle, AlertCircle, Loader2, Save, ShieldAlert } from 'lucide-react';
+import { PenTool, CheckCircle, AlertCircle, Loader2, Save, ShieldAlert, Link2 } from 'lucide-react';
 import { StoryRulesModal } from '../components/StoryRulesModal';
 import { FormattingEditor } from '../components/FormattingEditor';
+import { normalizeExternalHttpUrl } from '../utils/externalUrl';
 
 export function AddStoryPage() {
   const { user } = useAuth();
@@ -21,6 +22,7 @@ export function AddStoryPage() {
   const [category, setCategory] = useState<string>(categories[0] || 'Horror');
   const [length, setLength] = useState<StoryLength>('medium');
   const [isAdult, setIsAdult] = useState(false);
+  const [sourceUrl, setSourceUrl] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
@@ -76,6 +78,7 @@ export function AddStoryPage() {
       setCategory(story.category);
       setLength(story.length);
       setIsAdult(story.isAdult);
+      setSourceUrl(story.sourceUrl || '');
       setEditorChanged(false);
       loadedDraftIdRef.current = story.id;
     }).finally(() => {
@@ -98,6 +101,7 @@ export function AddStoryPage() {
       category,
       length,
       isAdult,
+      sourceUrl: normalizeExternalHttpUrl(sourceUrl),
       status,
     } as const;
 
@@ -130,6 +134,11 @@ export function AddStoryPage() {
       setError(`Story exceeds the maximum length of ${settings.maxStoryLength.toLocaleString()} characters.`);
       return;
     }
+    const normalizedSourceUrl = normalizeExternalHttpUrl(sourceUrl);
+    if (sourceUrl.trim() && !normalizedSourceUrl) {
+      setError('Source link must be a valid http:// or https:// URL.');
+      return;
+    }
 
     setSavingDraft(true);
     const versionAtStart = changeVersionRef.current;
@@ -142,6 +151,7 @@ export function AddStoryPage() {
         category,
         length,
         isAdult,
+        sourceUrl: normalizedSourceUrl,
         status: 'draft' as const,
       };
       const saved = activeDraftId
@@ -153,6 +163,7 @@ export function AddStoryPage() {
       if (savedLatestVersion) {
         setTitle(saved.title);
         setContent(saved.content);
+        setSourceUrl(saved.sourceUrl || '');
         setEditorChanged(false);
         setSavedMessage(automatic
           ? 'Draft saved automatically.'
@@ -165,11 +176,11 @@ export function AddStoryPage() {
       if (changeVersionRef.current === versionAtStart) setEditorChanged(false);
       setError(automatic
         ? 'Automatic draft save failed. Your text is still in the editor.'
-        : 'Failed to save the draft. Make sure the Supabase draft migration has been applied.');
+        : 'Failed to save the draft. Make sure the required Supabase migrations have been applied.');
     } finally {
       setSavingDraft(false);
     }
-  }, [activeDraftId, category, content, isAdult, length, navigate, savingDraft, settings.maxStoryLength, submitting, title, user]);
+  }, [activeDraftId, category, content, isAdult, length, navigate, savingDraft, settings.maxStoryLength, sourceUrl, submitting, title, user]);
 
   const handleSaveDraft = () => {
     void saveDraft(false);
@@ -189,6 +200,7 @@ export function AddStoryPage() {
     if (!content.trim()) { setError('Please write your story.'); return; }
     if (content.trim().length < 50) { setError('Story must be at least 50 characters.'); return; }
     if (content.trim().length > settings.maxStoryLength) { setError(`Story exceeds the maximum length of ${settings.maxStoryLength.toLocaleString()} characters.`); return; }
+    if (sourceUrl.trim() && !normalizeExternalHttpUrl(sourceUrl)) { setError('Source link must be a valid http:// or https:// URL.'); return; }
     if (userStoryCount === 0 && !agreedToRules) {
       setPublishAfterRules(true);
       setShowRules(true);
@@ -268,7 +280,7 @@ export function AddStoryPage() {
       <h2 className="text-2xl font-bold text-white mb-3">{requiresApproval ? 'Story Submitted!' : 'Story Published!'}</h2>
       <p className="text-gray-400 mb-6 leading-relaxed">{requiresApproval ? "Your story has been submitted and is waiting for approval." : "Your story has been published!"}</p>
       <div className="flex gap-3 justify-center">
-        <button onClick={() => { setSubmitted(false); setTitle(''); setContent(''); setIsAdult(false); setActiveDraftId(null); setEditorChanged(false); loadedDraftIdRef.current = null; navigate('/add-story', { replace: true }); }} className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors text-sm font-medium">Write Another</button>
+        <button onClick={() => { setSubmitted(false); setTitle(''); setContent(''); setIsAdult(false); setSourceUrl(''); setActiveDraftId(null); setEditorChanged(false); loadedDraftIdRef.current = null; navigate('/add-story', { replace: true }); }} className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors text-sm font-medium">Write Another</button>
         <button onClick={() => navigate('/stories')} className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors text-sm font-medium">View Stories</button>
       </div>
     </div></div>
@@ -303,6 +315,22 @@ export function AddStoryPage() {
           </span>
         </label>
         <div>
+          <label htmlFor="story-source" className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-300">
+            <Link2 className="h-4 w-4 text-purple-400" /> Source URL <span className="font-normal text-gray-600">(optional)</span>
+          </label>
+          <input
+            id="story-source"
+            type="url"
+            inputMode="url"
+            value={sourceUrl}
+            onChange={e => { setSourceUrl(e.target.value); markEditorChanged(); }}
+            placeholder="https://example.com/original-story"
+            maxLength={2048}
+            className="w-full rounded-xl border border-purple-900/30 bg-gray-900/80 px-4 py-3 text-gray-200 placeholder-gray-600 transition-all focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/20"
+          />
+          <p className="mt-2 text-xs leading-relaxed text-gray-600">Use this for translated stories or whenever the original source should be credited. Only http:// and https:// links are allowed.</p>
+        </div>
+        <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">
             Your Story
             <span className={`font-normal ml-2 ${content.length > settings.maxStoryLength ? 'text-red-400' : 'text-gray-600'}`}>
@@ -320,12 +348,12 @@ export function AddStoryPage() {
         </div>
         <div className="flex flex-col gap-4 pt-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-gray-600">Changes are saved automatically after 2 seconds of inactivity. Drafts stay private. {requiresApproval ? 'Submitted stories are reviewed before publishing.' : 'Published stories become visible immediately.'}</p>
-          <div className="flex flex-wrap gap-3 sm:justify-end">
-            <button type="button" onClick={handleSaveDraft} disabled={savingDraft || submitting} className="flex items-center gap-2 px-5 py-3 bg-gray-800 hover:bg-gray-700 border border-purple-900/30 text-gray-200 font-medium rounded-xl transition-all disabled:opacity-60">
+          <div className="flex w-full flex-nowrap gap-3 sm:w-auto sm:shrink-0 sm:justify-end">
+            <button type="button" onClick={handleSaveDraft} disabled={savingDraft || submitting} className="flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-purple-900/30 bg-gray-800 px-3 py-3 text-sm font-medium text-gray-200 transition-all hover:bg-gray-700 disabled:opacity-60 sm:flex-none sm:px-5 sm:text-base">
               {savingDraft ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 text-purple-400" />}
               {activeDraftId ? 'Save Draft' : 'Save as Draft'}
             </button>
-            <button type="submit" disabled={submitting || savingDraft} className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-medium rounded-xl transition-all shadow-lg shadow-purple-900/30 disabled:opacity-60 flex items-center gap-2">{submitting && <Loader2 className="h-4 w-4 animate-spin" />}{requiresApproval ? 'Submit for Review' : 'Publish Story'}</button>
+            <button type="submit" disabled={submitting || savingDraft} className="flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 px-3 py-3 text-sm font-medium text-white shadow-lg shadow-purple-900/30 transition-all hover:from-purple-500 hover:to-purple-600 disabled:opacity-60 sm:flex-none sm:px-6 sm:text-base">{submitting && <Loader2 className="h-4 w-4 animate-spin" />}{requiresApproval ? 'Submit for Review' : 'Publish Story'}</button>
           </div>
         </div>
       </form>
