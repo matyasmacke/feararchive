@@ -4,6 +4,8 @@ export type StoryStatus = ApprovalStatus | 'draft';
 export type StoryLength = 'short' | 'medium' | 'long';
 export type StoryReportStatus = 'open' | 'resolved' | 'dismissed';
 export type StoryReportReason = 'harmful' | 'copyright' | 'spam' | 'adult-label' | 'other';
+export type UserReportStatus = 'open' | 'resolved' | 'dismissed';
+export type UserReportReason = 'harassment' | 'impersonation' | 'spam' | 'inappropriate-profile' | 'other';
 
 export interface ChangelogEntry {
   id: string;
@@ -88,6 +90,29 @@ export const STORY_REPORT_REASON_LABELS: Record<StoryReportReason, string> = {
   copyright: 'Copyright or stolen content',
   spam: 'Spam or misleading content',
   'adult-label': 'Incorrect or missing 18+ label',
+  other: 'Other',
+};
+
+export interface UserReport {
+  id: string;
+  reportedUserId: string;
+  reportedUsername: string;
+  reporterId: string;
+  reporterName: string;
+  reason: UserReportReason;
+  details: string;
+  status: UserReportStatus;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const USER_REPORT_REASON_LABELS: Record<UserReportReason, string> = {
+  harassment: 'Harassment or abusive behaviour',
+  impersonation: 'Impersonation or fake identity',
+  spam: 'Spam or misleading activity',
+  'inappropriate-profile': 'Inappropriate profile content',
   other: 'Other',
 };
 

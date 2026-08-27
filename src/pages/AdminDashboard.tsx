@@ -5,8 +5,11 @@ import { useAuth } from '../store/AuthContext';
 import { ConfirmDialog, useConfirmDialog } from '../components/ConfirmDialog';
 import { AdultBadge } from '../components/AdultBadge';
 import { VerifiedBadge } from '../components/VerifiedBadge';
-import { STORY_REPORT_REASON_LABELS } from '../types';
-import type { User, Story, StoryReport, StoryReportStatus, UserRole, ApprovalStatus, StoryStatus, ModApplication } from '../types';
+import { STORY_REPORT_REASON_LABELS, USER_REPORT_REASON_LABELS } from '../types';
+import type {
+  User, Story, StoryReport, StoryReportStatus, UserReport, UserReportStatus,
+  UserRole, ApprovalStatus, StoryStatus, ModApplication,
+} from '../types';
 import {
   LayoutDashboard, BookOpen, Users, CheckCircle, XCircle,
   Trash2, Shield, Clock, Eye, BarChart3, AlertTriangle, Edit3,
@@ -14,7 +17,7 @@ import {
   BadgeCheck, BadgeX,
 } from 'lucide-react';
 
-type Tab = 'overview' | 'stories' | 'reports' | 'users' | 'names' | 'mods';
+type Tab = 'overview' | 'stories' | 'reports' | 'user-reports' | 'users' | 'names' | 'mods';
 
 export function AdminDashboard() {
   const { user, refreshUser } = useAuth();
@@ -23,10 +26,12 @@ export function AdminDashboard() {
   const [tab, setTab] = useState<Tab>('overview');
   const [storyFilter, setStoryFilter] = useState<StoryStatus | 'all'>('pending');
   const [reportFilter, setReportFilter] = useState<StoryReportStatus | 'all'>('open');
+  const [userReportFilter, setUserReportFilter] = useState<UserReportStatus | 'all'>('open');
   const [userFilter, setUserFilter] = useState<ApprovalStatus | 'all'>('pending');
   const [refresh, setRefresh] = useState(0);
   const [allStories, setAllStories] = useState<Story[]>([]);
   const [allReports, setAllReports] = useState<StoryReport[]>([]);
+  const [allUserReports, setAllUserReports] = useState<UserReport[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [allModApps, setAllModApps] = useState<ModApplication[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,10 +40,11 @@ export function AdminDashboard() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const urlTab = params.get('tab');
-    if (urlTab === 'stories' || urlTab === 'reports' || urlTab === 'users' || urlTab === 'overview' || urlTab === 'names' || urlTab === 'mods') {
+    if (urlTab === 'stories' || urlTab === 'reports' || urlTab === 'user-reports' || urlTab === 'users' || urlTab === 'overview' || urlTab === 'names' || urlTab === 'mods') {
       setTab(urlTab);
       if (urlTab === 'stories') setStoryFilter('pending');
       if (urlTab === 'reports') setReportFilter('open');
+      if (urlTab === 'user-reports') setUserReportFilter('open');
       if (urlTab === 'users') setUserFilter('pending');
     }
   }, [location.search]);
@@ -59,11 +65,12 @@ export function AdminDashboard() {
   useEffect(() => {
     let active = true;
     setLoading(true);
-    void Promise.all([db.getStories(), db.getStoryReports(), db.getUsers(), db.getModApplications()])
-      .then(([stories, reports, users, applications]) => {
+    void Promise.all([db.getStories(), db.getStoryReports(), db.getUserReports(), db.getUsers(), db.getModApplications()])
+      .then(([stories, reports, userReports, users, applications]) => {
         if (!active) return;
         setAllStories(stories);
         setAllReports(reports);
+        setAllUserReports(userReports);
         setAllUsers(users);
         setAllModApps(applications);
       })
@@ -90,6 +97,7 @@ export function AdminDashboard() {
 
   const pendingStories = allStories.filter(s => s.status === 'pending').length;
   const openReports = allReports.filter(report => report.status === 'open').length;
+  const openUserReports = allUserReports.filter(report => report.status === 'open').length;
   const pendingUsers = allUsers.filter(u => u.status === 'pending').length;
   const approvedStories = allStories.filter(s => s.status === 'approved').length;
   const approvedUsers = allUsers.filter(u => u.status === 'approved').length;
@@ -98,6 +106,7 @@ export function AdminDashboard() {
 
   const filteredStories = storyFilter === 'all' ? allStories : allStories.filter(s => s.status === storyFilter);
   const filteredReports = reportFilter === 'all' ? allReports : allReports.filter(report => report.status === reportFilter);
+  const filteredUserReports = userReportFilter === 'all' ? allUserReports : allUserReports.filter(report => report.status === userReportFilter);
   const filteredUsers = userFilter === 'all' ? allUsers : allUsers.filter(u => u.status === userFilter);
   const nameChangeUsers = allUsers.filter(u => u.pendingNameChange);
 
@@ -121,6 +130,11 @@ export function AdminDashboard() {
 
   const handleReportStatus = async (reportId: string, status: StoryReportStatus) => {
     await db.updateStoryReportStatus(reportId, status);
+    bump();
+  };
+
+  const handleUserReportStatus = async (reportId: string, status: UserReportStatus) => {
+    await db.updateUserReportStatus(reportId, status);
     bump();
   };
 
@@ -181,7 +195,8 @@ export function AdminDashboard() {
   const tabs: { id: Tab; label: string; icon: typeof LayoutDashboard; badge?: number }[] = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'stories', label: 'Stories', icon: BookOpen, badge: pendingStories },
-    { id: 'reports', label: 'Reports', icon: Flag, badge: openReports },
+    { id: 'reports', label: 'Story Reports', icon: Flag, badge: openReports },
+    { id: 'user-reports', label: 'User Reports', icon: Users, badge: openUserReports },
     { id: 'users', label: 'Users', icon: Users, badge: pendingUsers },
     { id: 'names', label: 'Name Changes', icon: Edit3, badge: pendingNames },
     ...(isAdmin ? [{ id: 'mods' as const, label: 'Mod Applications', icon: Shield, badge: pendingModApps }] : []),
@@ -297,6 +312,20 @@ export function AdminDashboard() {
               </div>
             )}
 
+            {openUserReports > 0 && (
+              <div className="mb-4 rounded-xl border border-red-800/30 bg-red-900/10 p-5">
+                <h3 className="mb-1 flex items-center gap-2 font-medium text-red-400">
+                  <Users className="h-4 w-4" /> Open User Reports
+                </h3>
+                <p className="text-sm text-gray-400">
+                  {openUserReports} user {openUserReports === 1 ? 'report needs' : 'reports need'} moderator review.{' '}
+                  <button onClick={() => { setTab('user-reports'); setUserReportFilter('open'); }} className="text-red-400 hover:text-red-300">
+                    Review now →
+                  </button>
+                </p>
+              </div>
+            )}
+
             {pendingNames > 0 && (
               <div className="bg-purple-900/10 border border-purple-800/30 rounded-xl p-5 mb-4">
                 <h3 className="text-purple-400 font-medium flex items-center gap-2 mb-1">
@@ -400,6 +429,47 @@ export function AdminDashboard() {
                     onResolve={() => handleReportStatus(report.id, 'resolved')}
                     onDismiss={() => handleReportStatus(report.id, 'dismissed')}
                     onReopen={() => handleReportStatus(report.id, 'open')}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── User Reports Tab ── */}
+        {tab === 'user-reports' && (
+          <div className="animate-fade-in">
+            <div className="mb-6 flex flex-wrap items-center gap-2">
+              {(['all', 'open', 'resolved', 'dismissed'] as const).map(filter => (
+                <button
+                  key={filter}
+                  onClick={() => setUserReportFilter(filter)}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium capitalize transition-all ${
+                    userReportFilter === filter
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  {filter} ({filter === 'all' ? allUserReports.length : allUserReports.filter(report => report.status === filter).length})
+                </button>
+              ))}
+            </div>
+
+            {filteredUserReports.length === 0 ? (
+              <div className="py-16 text-center">
+                <Users className="mx-auto mb-3 h-12 w-12 text-gray-700" />
+                <p className="text-gray-500">No user reports found.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredUserReports.map(report => (
+                  <UserReportRow
+                    key={report.id}
+                    report={report}
+                    onView={() => navigate(`/user/${report.reportedUserId}`)}
+                    onResolve={() => handleUserReportStatus(report.id, 'resolved')}
+                    onDismiss={() => handleUserReportStatus(report.id, 'dismissed')}
+                    onReopen={() => handleUserReportStatus(report.id, 'open')}
                   />
                 ))}
               </div>
@@ -587,6 +657,76 @@ export function AdminDashboard() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ── User Report Row ── */
+function UserReportRow({ report, onView, onResolve, onDismiss, onReopen }: {
+  report: UserReport;
+  onView: () => void;
+  onResolve: () => void;
+  onDismiss: () => void;
+  onReopen: () => void;
+}) {
+  const statusClasses: Record<UserReportStatus, string> = {
+    open: 'border-red-800/40 bg-red-900/20 text-red-400',
+    resolved: 'border-green-800/40 bg-green-900/20 text-green-400',
+    dismissed: 'border-gray-700/50 bg-gray-800/50 text-gray-400',
+  };
+
+  return (
+    <div className="rounded-xl border border-red-900/20 bg-gray-900/50 p-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <h3 className="truncate font-semibold text-gray-200">{report.reportedUsername}</h3>
+            <span className={`rounded-lg border px-2 py-0.5 text-xs font-medium capitalize ${statusClasses[report.status]}`}>
+              {report.status}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+            <span>Reported user <span className="text-gray-400">{report.reportedUsername}</span></span>
+            <span>Reported by <span className="text-gray-400">{report.reporterName}</span></span>
+            <span>{new Date(report.createdAt).toLocaleString()}</span>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <button onClick={onView} className="flex items-center gap-1.5 rounded-lg bg-gray-800 px-3 py-2 text-sm font-medium text-gray-400 transition-all hover:bg-gray-700 hover:text-purple-300">
+            <Eye className="h-4 w-4" /> View Profile
+          </button>
+          {report.status === 'open' ? (
+            <>
+              <button onClick={onResolve} className="flex items-center gap-1.5 rounded-lg bg-green-900/20 px-3 py-2 text-sm font-medium text-green-400 transition-all hover:bg-green-900/40">
+                <CheckCircle className="h-4 w-4" /> Resolve
+              </button>
+              <button onClick={onDismiss} className="flex items-center gap-1.5 rounded-lg bg-gray-800 px-3 py-2 text-sm font-medium text-gray-400 transition-all hover:bg-gray-700">
+                <XCircle className="h-4 w-4" /> Dismiss
+              </button>
+            </>
+          ) : (
+            <button onClick={onReopen} className="flex items-center gap-1.5 rounded-lg bg-amber-900/20 px-3 py-2 text-sm font-medium text-amber-400 transition-all hover:bg-amber-900/40">
+              <RotateCcw className="h-4 w-4" /> Reopen
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-gray-800/60 bg-gray-950/50 p-4">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-red-400/80">
+          {USER_REPORT_REASON_LABELS[report.reason]}
+        </p>
+        <p className={`whitespace-pre-wrap break-words text-sm leading-relaxed ${report.details ? 'text-gray-300' : 'italic text-gray-600'}`}>
+          {report.details || 'No additional details were provided.'}
+        </p>
+      </div>
+
+      {report.reviewedAt && (
+        <p className="mt-3 text-right text-xs text-gray-600">
+          Last reviewed {new Date(report.reviewedAt).toLocaleString()}
+        </p>
+      )}
     </div>
   );
 }

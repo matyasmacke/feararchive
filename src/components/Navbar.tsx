@@ -4,7 +4,7 @@ import { useAuth } from '../store/AuthContext';
 import { db } from '../store/db';
 import {
   BookOpen, Grid3X3, Info, Menu, X,
-  User, PenTool, LogOut, Eye,
+  User, Users, PenTool, LogOut, Eye,
   Bell, LayoutDashboard, Settings, Shield, ChevronDown, Edit3,
   Search, Clock, Heart, Home, Mail, Flag,
 } from 'lucide-react';
@@ -18,6 +18,7 @@ import { VerifiedBadge } from './VerifiedBadge';
 interface NotificationCounts {
   pendingStories: number;
   openReports: number;
+  openUserReports: number;
   pendingUsers: number;
   pendingNames: number;
   pendingModApps: number;
@@ -27,6 +28,7 @@ interface NotificationCounts {
 const EMPTY_NOTIFICATIONS: NotificationCounts = {
   pendingStories: 0,
   openReports: 0,
+  openUserReports: 0,
   pendingUsers: 0,
   pendingNames: 0,
   pendingModApps: 0,
@@ -143,23 +145,26 @@ export function Navbar() {
       previousNotificationsRef.current = null;
     }
 
-    const [stories, reports, users, applications] = await Promise.all([
+    const [stories, reports, userReports, users, applications] = await Promise.all([
       db.getPendingStories(),
       db.getStoryReports(),
+      db.getUserReports(),
       db.getUsers(),
       db.getModApplications(),
     ]);
     const pendingStories = stories.length;
     const openReports = reports.filter(report => report.status === 'open').length;
+    const openUserReports = userReports.filter(report => report.status === 'open').length;
     const pendingUsers = users.filter(u => u.status === 'pending').length;
     const pendingNames = users.filter(u => u.pendingNameChange).length;
     const modApps = isAdmin ? applications.filter(a => a.status === 'pending').length : 0;
-    const total = pendingStories + openReports + pendingUsers + pendingNames + modApps;
-    const nextNotifications = { pendingStories, openReports, pendingUsers, pendingNames, pendingModApps: modApps, total };
+    const total = pendingStories + openReports + openUserReports + pendingUsers + pendingNames + modApps;
+    const nextNotifications = { pendingStories, openReports, openUserReports, pendingUsers, pendingNames, pendingModApps: modApps, total };
     const previousNotifications = previousNotificationsRef.current;
     const hasNewNotification = previousNotifications !== null && (
       nextNotifications.pendingStories > previousNotifications.pendingStories
       || nextNotifications.openReports > previousNotifications.openReports
+      || nextNotifications.openUserReports > previousNotifications.openUserReports
       || nextNotifications.pendingUsers > previousNotifications.pendingUsers
       || nextNotifications.pendingNames > previousNotifications.pendingNames
       || nextNotifications.pendingModApps > previousNotifications.pendingModApps
@@ -356,6 +361,18 @@ export function Navbar() {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <p className="text-sm font-medium text-gray-200">{notifications.openReports} open {notifications.openReports === 1 ? 'report' : 'reports'}</p>
+                                      <p className="text-xs text-gray-500">Waiting for moderator review</p>
+                                    </div>
+                                    <ChevronDown className="h-4 w-4 text-gray-600 -rotate-90 shrink-0" />
+                                  </button>
+                                )}
+                                {notifications.openUserReports > 0 && (
+                                  <button onClick={() => { navigate('/admin?tab=user-reports'); closeNotif(); }} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-900/20 transition-colors text-left">
+                                    <div className="h-10 w-10 rounded-xl bg-red-900/30 border border-red-800/30 flex items-center justify-center shrink-0">
+                                      <Users className="h-5 w-5 text-red-400" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-gray-200">{notifications.openUserReports} open user {notifications.openUserReports === 1 ? 'report' : 'reports'}</p>
                                       <p className="text-xs text-gray-500">Waiting for moderator review</p>
                                     </div>
                                     <ChevronDown className="h-4 w-4 text-gray-600 -rotate-90 shrink-0" />

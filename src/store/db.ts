@@ -1,5 +1,8 @@
 import { supabase } from './supabaseClient';
-import type { User, Story, StoryReport, StoryReportReason, StoryReportStatus, ModApplication, ChangelogEntry } from '../types';
+import type {
+  User, Story, StoryReport, StoryReportReason, StoryReportStatus,
+  UserReport, UserReportReason, UserReportStatus, ModApplication, ChangelogEntry,
+} from '../types';
 import { notifyDataChange } from './settings';
 
 // ── Row ↔ Model mappers ──
@@ -93,6 +96,23 @@ function toStoryReport(row: Record<string, unknown>): StoryReport {
     reason: row.reason as StoryReportReason,
     details: (row.details as string) || '',
     status: row.status as StoryReportStatus,
+    reviewedBy: (row.reviewed_by as string) || undefined,
+    reviewedAt: (row.reviewed_at as string) || undefined,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  };
+}
+
+function toUserReport(row: Record<string, unknown>): UserReport {
+  return {
+    id: row.id as string,
+    reportedUserId: row.reported_user_id as string,
+    reportedUsername: row.reported_username as string,
+    reporterId: row.reporter_id as string,
+    reporterName: row.reporter_name as string,
+    reason: row.reason as UserReportReason,
+    details: (row.details as string) || '',
+    status: row.status as UserReportStatus,
     reviewedBy: (row.reviewed_by as string) || undefined,
     reviewedAt: (row.reviewed_at as string) || undefined,
     createdAt: row.created_at as string,
@@ -376,6 +396,60 @@ class Database {
     return toStoryReport(data);
   }
 
+  // ── User Reports ──
+
+  async getUserReports(): Promise<UserReport[]> {
+    const { data, error } = await supabase
+      .from('user_reports')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) return [];
+    return (data || []).map(toUserReport);
+  }
+
+  async hasUserReportedUser(reportedUserId: string, reporterId: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('user_reports')
+      .select('id')
+      .eq('reported_user_id', reportedUserId)
+      .eq('reporter_id', reporterId)
+      .maybeSingle();
+    return !error && Boolean(data);
+  }
+
+  async addUserReport(report: {
+    reportedUserId: string;
+    reporterId: string;
+    reason: UserReportReason;
+    details: string;
+  }): Promise<UserReport> {
+    const { data, error } = await supabase
+      .from('user_reports')
+      .insert({
+        reported_user_id: report.reportedUserId,
+        reporter_id: report.reporterId,
+        reason: report.reason,
+        details: report.details.trim(),
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    notifyDataChange();
+    return toUserReport(data);
+  }
+
+  async updateUserReportStatus(id: string, status: UserReportStatus): Promise<UserReport | undefined> {
+    const { data, error } = await supabase
+      .from('user_reports')
+      .update({ status })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error || !data) return undefined;
+    notifyDataChange();
+    return toUserReport(data);
+  }
+
   // ── Bulk Actions ──
 
   async approveAllPending(): Promise<void> {
@@ -482,6 +556,7 @@ supabase
   .channel('db-realtime')
   .on('postgres_changes', { event: '*', schema: 'public', table: 'stories' }, () => notifyDataChange())
   .on('postgres_changes', { event: '*', schema: 'public', table: 'story_reports' }, () => notifyDataChange())
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'user_reports' }, () => notifyDataChange())
   .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => notifyDataChange())
   .on('postgres_changes', { event: '*', schema: 'public', table: 'changelogs' }, () => notifyDataChange())
   .on('postgres_changes', { event: '*', schema: 'public', table: 'mod_applications' }, () => notifyDataChange())

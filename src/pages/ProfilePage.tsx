@@ -8,11 +8,12 @@ import { FormattedContent, stripFormatting } from '../components/FormattedConten
 import { FormattingEditor } from '../components/FormattingEditor';
 import { AdultBadge } from '../components/AdultBadge';
 import { VerifiedBadge } from '../components/VerifiedBadge';
-import type { User, Story } from '../types';
+import { UserReportModal } from '../components/UserReportModal';
+import type { User, Story, UserReportReason } from '../types';
 import {
   User as UserIcon, Edit3, Save, X, BookOpen, Heart,
   Shield, Clock, AlertCircle, Camera, Upload,
-  Check, Trash2, ExternalLink, FileText,
+  Check, CheckCircle, Trash2, ExternalLink, FileText, Flag,
 } from 'lucide-react';
 
 type ProfileTab = 'stories' | 'drafts' | 'liked';
@@ -96,6 +97,9 @@ export function ProfilePage() {
   const [activeTab, setActiveTab] = useState<ProfileTab>('stories');
   const [youtubeError, setYoutubeError] = useState('');
   const [instagramError, setInstagramError] = useState('');
+  const [showUserReportModal, setShowUserReportModal] = useState(false);
+  const [hasReportedUser, setHasReportedUser] = useState(false);
+  const [reportFeedback, setReportFeedback] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canViewDrafts = Boolean(
     profileUser
@@ -106,6 +110,18 @@ export function ProfilePage() {
   useEffect(() => {
     if (activeTab === 'drafts' && !canViewDrafts) setActiveTab('stories');
   }, [activeTab, canViewDrafts]);
+
+  useEffect(() => {
+    let active = true;
+    if (!profileUser || !currentUser || profileUser.id === currentUser.id) {
+      setHasReportedUser(false);
+      return () => { active = false; };
+    }
+    void db.hasUserReportedUser(profileUser.id, currentUser.id).then(reported => {
+      if (active) setHasReportedUser(reported);
+    });
+    return () => { active = false; };
+  }, [currentUser?.id, profileUser?.id]);
 
   // Image cropper state
   const [cropperImage, setCropperImage] = useState<string | null>(null);
@@ -269,6 +285,32 @@ export function ProfilePage() {
     await refreshUser();
   };
 
+  const handleSubmitUserReport = async (reason: UserReportReason, details: string) => {
+    if (!currentUser) throw new Error('You need to be logged in to report a user.');
+    if (currentUser.id === profileUser.id) throw new Error('You cannot report your own account.');
+    try {
+      await db.addUserReport({
+        reportedUserId: profileUser.id,
+        reporterId: currentUser.id,
+        reason,
+        details,
+      });
+      setHasReportedUser(true);
+      setShowUserReportModal(false);
+      setReportFeedback('Thank you. The user was reported to the moderation team.');
+      setTimeout(() => setReportFeedback(null), 3500);
+    } catch (reportError) {
+      const code = typeof reportError === 'object' && reportError && 'code' in reportError
+        ? String(reportError.code)
+        : '';
+      if (code === '23505') {
+        setHasReportedUser(true);
+        throw new Error('You have already reported this user.');
+      }
+      throw new Error('The report could not be submitted. Make sure the user reports migration has been applied.');
+    }
+  };
+
   const handleDeleteAccount = () => {
     confirm({
       title: 'Delete Account',
@@ -311,6 +353,22 @@ export function ProfilePage() {
   return (
     <div className="min-h-screen">
       <ConfirmDialog {...dialogProps} />
+      {showUserReportModal && (
+        <UserReportModal
+          username={profileUser.username}
+          onClose={() => setShowUserReportModal(false)}
+          onSubmit={handleSubmitUserReport}
+        />
+      )}
+
+      {reportFeedback && (
+        <div className="fixed right-4 top-20 z-[110] animate-slide-down">
+          <div className="flex items-center gap-2 rounded-xl border border-green-900/40 bg-gray-900 px-5 py-3 shadow-2xl shadow-purple-950/40">
+            <CheckCircle className="h-4 w-4 text-green-400" />
+            <span className="text-sm text-gray-200">{reportFeedback}</span>
+          </div>
+        </div>
+      )}
 
       {/* Image Cropper Modal */}
       {cropperImage && (
@@ -334,7 +392,7 @@ export function ProfilePage() {
       <header className="relative overflow-hidden border-b border-purple-900/20 bg-gradient-to-b from-purple-950/60 via-fear-950 to-fear-950 px-4 py-8 sm:py-12">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(168,85,247,0.15),transparent_42%)]" />
         <div className="relative mx-auto grid max-w-4xl grid-cols-[5.5rem_minmax(0,1fr)] gap-x-5 gap-y-5 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-x-10">
-          <div className="group relative flex items-start justify-center">
+          <div className="group relative flex items-start justify-center sm:row-span-2">
             <div className="flex h-22 w-22 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-purple-500 to-purple-950 text-3xl font-bold text-white shadow-2xl shadow-purple-950/60 ring-2 ring-purple-500/60 ring-offset-4 ring-offset-fear-950 sm:h-36 sm:w-36 sm:text-5xl">
               {(editing ? avatarPreview : profileUser.avatar) ? (
                 <img
@@ -374,6 +432,21 @@ export function ProfilePage() {
                 >
                   <Edit3 className="h-3.5 w-3.5" />
                   Edit Profile
+                </button>
+              )}
+              {currentUser && currentUser.id !== profileUser.id && currentUser.status === 'approved' && profileUser.status === 'approved' && !profileUser.isGhost && !editing && (
+                <button
+                  type="button"
+                  onClick={() => { if (!hasReportedUser) setShowUserReportModal(true); }}
+                  disabled={hasReportedUser}
+                  className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors sm:ml-auto sm:px-4 sm:text-sm ${
+                    hasReportedUser
+                      ? 'cursor-default border-green-900/40 bg-green-950/30 text-green-400'
+                      : 'border-red-900/40 bg-red-950/20 text-red-400 hover:bg-red-900/30 hover:text-red-300'
+                  }`}
+                >
+                  {hasReportedUser ? <CheckCircle className="h-3.5 w-3.5" /> : <Flag className="h-3.5 w-3.5" />}
+                  {hasReportedUser ? 'Reported' : 'Report User'}
                 </button>
               )}
             </div>
