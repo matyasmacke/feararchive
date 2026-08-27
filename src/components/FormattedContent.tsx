@@ -4,6 +4,7 @@ interface FormattedContentProps {
   content: string;
   className?: string;
   compact?: boolean;
+  allowLinks?: boolean;
 }
 
 type InlineTokenType = 'link' | 'pipe-link' | 'url' | 'bold' | 'underline' | 'italic';
@@ -39,7 +40,7 @@ function safeHref(rawUrl: string): string | null {
   return /^(https?:\/\/|mailto:)/i.test(url) ? url : null;
 }
 
-function renderInline(value: string, keyPrefix: string): ReactNode[] {
+function renderInline(value: string, keyPrefix: string, allowLinks: boolean): ReactNode[] {
   const nodes: ReactNode[] = [];
   let remaining = value;
   let index = 0;
@@ -60,19 +61,19 @@ function renderInline(value: string, keyPrefix: string): ReactNode[] {
     if (token.type === 'bold') {
       nodes.push(
         <strong key={key} className="font-bold text-gray-100">
-          {renderInline(token.match[1], `${key}-bold`)}
+          {renderInline(token.match[1], `${key}-bold`, allowLinks)}
         </strong>,
       );
     } else if (token.type === 'underline') {
       nodes.push(
         <u key={key} className="decoration-purple-400/70 underline-offset-2">
-          {renderInline(token.match[1], `${key}-underline`)}
+          {renderInline(token.match[1], `${key}-underline`, allowLinks)}
         </u>,
       );
     } else if (token.type === 'italic') {
       nodes.push(
         <em key={key} className="italic text-gray-300">
-          {renderInline(token.match[1], `${key}-italic`)}
+          {renderInline(token.match[1], `${key}-italic`, allowLinks)}
         </em>,
       );
     } else {
@@ -84,9 +85,11 @@ function renderInline(value: string, keyPrefix: string): ReactNode[] {
       const href = safeHref(rawUrl);
       const label = token.type === 'link' ? (token.match[2] || rawUrl) : rawUrl;
 
-      if (href) {
+      if (!allowLinks) {
+        nodes.push(label.trim());
+      } else if (href) {
         const renderedLabel = token.type === 'link' && token.match[2]
-          ? renderInline(label.trim(), `${key}-link`)
+          ? renderInline(label.trim(), `${key}-link`, allowLinks)
           : label.trim();
         nodes.push(
           <a
@@ -119,7 +122,7 @@ function isBlockStart(line: string): boolean {
     || /^>\s?/.test(trimmed);
 }
 
-export function FormattedContent({ content, className = '', compact = false }: FormattedContentProps) {
+export function FormattedContent({ content, className = '', compact = false, allowLinks = true }: FormattedContentProps) {
   const lines = content.replace(/\r\n?/g, '\n').split('\n');
   const blocks: ReactNode[] = [];
   let index = 0;
@@ -147,13 +150,13 @@ export function FormattedContent({ content, className = '', compact = false }: F
     }
 
     if (trimmed.startsWith('### ')) {
-      blocks.push(<h4 key={`h4-${index}`} className={headingSmall}>{renderInline(trimmed.slice(4), `h4-${index}`)}</h4>);
+      blocks.push(<h4 key={`h4-${index}`} className={headingSmall}>{renderInline(trimmed.slice(4), `h4-${index}`, allowLinks)}</h4>);
       index += 1;
       continue;
     }
 
     if (trimmed.startsWith('## ')) {
-      blocks.push(<h3 key={`h3-${index}`} className={headingLarge}>{renderInline(trimmed.slice(3), `h3-${index}`)}</h3>);
+      blocks.push(<h3 key={`h3-${index}`} className={headingLarge}>{renderInline(trimmed.slice(3), `h3-${index}`, allowLinks)}</h3>);
       index += 1;
       continue;
     }
@@ -166,7 +169,7 @@ export function FormattedContent({ content, className = '', compact = false }: F
       }
       blocks.push(
         <ul key={`ul-${index}`} className={`list-disc ${listClass}`}>
-          {items.map((item, itemIndex) => <li key={itemIndex}>{renderInline(item, `ul-${index}-${itemIndex}`)}</li>)}
+          {items.map((item, itemIndex) => <li key={itemIndex}>{renderInline(item, `ul-${index}-${itemIndex}`, allowLinks)}</li>)}
         </ul>,
       );
       continue;
@@ -180,7 +183,7 @@ export function FormattedContent({ content, className = '', compact = false }: F
       }
       blocks.push(
         <ol key={`ol-${index}`} className={`list-decimal ${listClass}`}>
-          {items.map((item, itemIndex) => <li key={itemIndex}>{renderInline(item, `ol-${index}-${itemIndex}`)}</li>)}
+          {items.map((item, itemIndex) => <li key={itemIndex}>{renderInline(item, `ol-${index}-${itemIndex}`, allowLinks)}</li>)}
         </ol>,
       );
       continue;
@@ -200,7 +203,7 @@ export function FormattedContent({ content, className = '', compact = false }: F
           {quoteLines.map((quoteLine, quoteIndex) => (
             <Fragment key={quoteIndex}>
               {quoteIndex > 0 && <br />}
-              {renderInline(quoteLine, `quote-${index}-${quoteIndex}`)}
+              {renderInline(quoteLine, `quote-${index}-${quoteIndex}`, allowLinks)}
             </Fragment>
           ))}
         </blockquote>,
@@ -218,7 +221,7 @@ export function FormattedContent({ content, className = '', compact = false }: F
         {paragraphLines.map((paragraphLine, lineIndex) => (
           <Fragment key={lineIndex}>
             {lineIndex > 0 && <br />}
-            {renderInline(paragraphLine, `p-${index}-${lineIndex}`)}
+            {renderInline(paragraphLine, `p-${index}-${lineIndex}`, allowLinks)}
           </Fragment>
         ))}
       </p>,

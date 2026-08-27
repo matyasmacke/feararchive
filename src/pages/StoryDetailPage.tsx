@@ -253,6 +253,7 @@ export function StoryDetailPage() {
       <div className="max-w-3xl mx-auto px-4 py-10">
         <FormattedContent
           content={story.content}
+          allowLinks={false}
           className="story-content text-base text-gray-300 md:text-lg"
         />
 

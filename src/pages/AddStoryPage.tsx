@@ -115,6 +115,7 @@ export function AddStoryPage() {
             onChange={setContent}
             placeholder="It was a dark and stormy night..."
             rows={16}
+            allowLinks={false}
             aria-label="Your story content"
           />
         </div>

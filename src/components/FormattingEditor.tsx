@@ -17,6 +17,7 @@ interface FormattingEditorProps extends Omit<TextareaHTMLAttributes<HTMLTextArea
   onChange: (value: string) => void;
   showHelp?: boolean;
   compact?: boolean;
+  allowLinks?: boolean;
 }
 
 interface ToolbarButtonProps {
@@ -44,6 +45,7 @@ export function FormattingEditor({
   onChange,
   showHelp = true,
   compact = false,
+  allowLinks = true,
   className = '',
   ...textareaProps
 }: FormattingEditorProps) {
@@ -140,8 +142,12 @@ export function FormattingEditor({
         <ToolbarButton label="Bullet list" onClick={() => formatLines('bullet')}><List className="h-4 w-4" /></ToolbarButton>
         <ToolbarButton label="Numbered list" onClick={() => formatLines('ordered')}><ListOrdered className="h-4 w-4" /></ToolbarButton>
         <ToolbarButton label="Quote" onClick={() => formatLines('quote')}><Quote className="h-4 w-4" /></ToolbarButton>
-        <span className="mx-1 h-5 w-px bg-purple-900/40" aria-hidden="true" />
-        <ToolbarButton label="Link" onClick={insertLink}><LinkIcon className="h-4 w-4" /></ToolbarButton>
+        {allowLinks && (
+          <>
+            <span className="mx-1 h-5 w-px bg-purple-900/40" aria-hidden="true" />
+            <ToolbarButton label="Link" onClick={insertLink}><LinkIcon className="h-4 w-4" /></ToolbarButton>
+          </>
+        )}
       </div>
 
       <textarea
@@ -170,7 +176,7 @@ export function FormattingEditor({
               <span><code className="text-purple-300">- text</code> bullet</span>
               <span><code className="text-purple-300">1. text</code> numbered</span>
               <span><code className="text-purple-300">&gt; text</code> quote</span>
-              <span><code className="text-purple-300">{'{url=...,text=...}'}</code> link</span>
+              {allowLinks && <span><code className="text-purple-300">{'{url=...,text=...}'}</code> link</span>}
             </div>
           </div>
         </details>
