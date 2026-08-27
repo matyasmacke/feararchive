@@ -34,6 +34,7 @@ create table if not exists public.stories (
   status text not null default 'pending',
   is_adult boolean not null default false,
   source_url text,
+  thumbnail_path text,
   likes integer not null default 0 check (likes >= 0),
   liked_by text[] not null default '{}',
   created_at timestamptz not null default now(),
@@ -54,6 +55,7 @@ create table if not exists public.stories (
 alter table public.stories add column if not exists updated_at timestamptz not null default now();
 alter table public.stories add column if not exists is_adult boolean not null default false;
 alter table public.stories add column if not exists source_url text;
+alter table public.stories add column if not exists thumbnail_path text;
 alter table public.stories alter column title set default '';
 alter table public.stories alter column content set default '';
 alter table public.stories drop constraint if exists stories_title_check;
@@ -129,6 +131,33 @@ create table if not exists public.site_settings (
   data jsonb not null default '{}',
   updated_at timestamptz not null default now()
 );
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'story-thumbnails',
+  'story-thumbnails',
+  true,
+  5242880,
+  array['image/jpeg', 'image/png', 'image/webp']
+)
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists story_thumbnails_public_read on storage.objects;
+drop policy if exists story_thumbnails_insert_own on storage.objects;
+drop policy if exists story_thumbnails_update_own on storage.objects;
+drop policy if exists story_thumbnails_delete_own on storage.objects;
+create policy story_thumbnails_public_read on storage.objects for select
+  using (bucket_id = 'story-thumbnails');
+create policy story_thumbnails_insert_own on storage.objects for insert to authenticated
+  with check (bucket_id = 'story-thumbnails' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy story_thumbnails_update_own on storage.objects for update to authenticated
+  using (bucket_id = 'story-thumbnails' and (storage.foldername(name))[1] = auth.uid()::text)
+  with check (bucket_id = 'story-thumbnails' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy story_thumbnails_delete_own on storage.objects for delete to authenticated
+  using (bucket_id = 'story-thumbnails' and (storage.foldername(name))[1] = auth.uid()::text);
 
 create or replace function public.default_site_settings()
 returns jsonb

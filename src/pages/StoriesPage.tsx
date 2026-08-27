@@ -244,7 +244,13 @@ export function StoriesPage() {
                   className="group block animate-fade-in"
                   style={{ animationDelay: `${i * 50}ms`, animationFillMode: 'both' }}
                 >
-                  <div className="h-full bg-gradient-to-br from-gray-900 to-gray-900/50 border border-purple-900/20 rounded-xl p-6 transition-all duration-300 hover:border-purple-700/40 hover:shadow-lg hover:shadow-purple-900/20 hover:-translate-y-1">
+                  <div className="h-full overflow-hidden rounded-xl border border-purple-900/20 bg-gradient-to-br from-gray-900 to-gray-900/50 transition-all duration-300 hover:-translate-y-1 hover:border-purple-700/40 hover:shadow-lg hover:shadow-purple-900/20">
+                    {story.thumbnailPath && (
+                      <div className="aspect-video w-full overflow-hidden border-b border-purple-900/20 bg-gray-950">
+                        <img src={db.getStoryThumbnailUrl(story.thumbnailPath)} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      </div>
+                    )}
+                    <div className="p-6">
                     <div className="flex items-start justify-between gap-2 mb-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${catColor.bg} ${catColor.text} text-xs font-medium rounded-lg border ${catColor.border}`}>
@@ -280,6 +286,7 @@ export function StoriesPage() {
                           {story.length}
                         </span>
                       </div>
+                    </div>
                     </div>
                   </div>
                 </Link>

@@ -186,16 +186,24 @@ export function HomePage() {
                 className="group block animate-fade-in"
                 style={{ animationDelay: `${i * 100}ms`, animationFillMode: 'both' }}
               >
-                <div className={`relative h-full bg-gradient-to-br from-gray-900 to-gray-900/50 border rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 overflow-hidden ${
+                <div className={`relative h-full overflow-hidden rounded-2xl border bg-gradient-to-br from-gray-900 to-gray-900/50 transition-all duration-300 hover:-translate-y-1 ${
                   i === 0
                     ? 'border-yellow-800/30 hover:border-yellow-600/50 hover:shadow-lg hover:shadow-yellow-900/10'
                     : 'border-purple-900/20 hover:border-purple-700/40 hover:shadow-lg hover:shadow-purple-900/20'
                 }`}>
                   {i === 0 && (
-                    <div className="absolute top-0 right-0 px-3 py-1 bg-gradient-to-l from-yellow-600/20 to-transparent">
+                    <div className="absolute right-0 top-0 z-10 rounded-bl-lg bg-gray-950/75 px-3 py-1 backdrop-blur-sm">
                       <Star className="h-4 w-4 text-yellow-400 inline" />
                     </div>
                   )}
+
+                  {story.thumbnailPath && (
+                    <div className="aspect-video w-full overflow-hidden border-b border-purple-900/20 bg-gray-950">
+                      <img src={db.getStoryThumbnailUrl(story.thumbnailPath)} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    </div>
+                  )}
+
+                  <div className="p-6">
 
                   <div className="flex items-center gap-2 mb-3">
                     {(() => { 
@@ -227,6 +235,7 @@ export function HomePage() {
                       <Heart className="h-3.5 w-3.5 fill-red-400" />
                       {story.likes}
                     </div>
+                  </div>
                   </div>
                 </div>
               </Link>
@@ -262,6 +271,11 @@ export function HomePage() {
                 style={{ animationDelay: `${i * 60}ms`, animationFillMode: 'both' }}
               >
                 <div className="bg-gray-900/50 border border-purple-900/20 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center gap-3 transition-all hover:border-purple-700/40 hover:bg-gray-900/70">
+                  {story.thumbnailPath && (
+                    <div className="aspect-video w-full shrink-0 overflow-hidden rounded-lg border border-purple-900/20 bg-gray-950 sm:h-16 sm:w-28">
+                      <img src={db.getStoryThumbnailUrl(story.thumbnailPath)} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-gray-200 group-hover:text-purple-300 transition-colors truncate mb-1">
                       {story.title}

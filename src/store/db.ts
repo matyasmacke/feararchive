@@ -52,6 +52,7 @@ function toStory(row: Record<string, unknown>): Story {
     status: row.status as Story['status'],
     isAdult: (row.is_adult as boolean) || false,
     sourceUrl: (row.source_url as string) || undefined,
+    thumbnailPath: (row.thumbnail_path as string) || undefined,
     likes: (row.likes as number) || 0,
     likedBy: (row.liked_by as string[]) || [],
     createdAt: row.created_at as string,
@@ -70,6 +71,7 @@ function toStoryRow(s: Partial<Story>): Record<string, unknown> {
   if (s.status !== undefined) row.status = s.status;
   if (s.isAdult !== undefined) row.is_adult = s.isAdult;
   if ('sourceUrl' in s) row.source_url = s.sourceUrl || null;
+  if ('thumbnailPath' in s) row.thumbnail_path = s.thumbnailPath || null;
   if (s.likes !== undefined) row.likes = s.likes;
   if (s.likedBy !== undefined) row.liked_by = s.likedBy;
   return row;
@@ -272,6 +274,7 @@ class Database {
         status: story.status,
         is_adult: story.isAdult,
         source_url: story.sourceUrl || null,
+        thumbnail_path: story.thumbnailPath || null,
       })
       .select()
       .single();
@@ -294,6 +297,24 @@ class Database {
     if (error) return false;
     notifyDataChange();
     return true;
+  }
+
+  async uploadStoryThumbnail(userId: string, file: Blob): Promise<string> {
+    const path = `${userId}/${crypto.randomUUID()}.jpg`;
+    const { error } = await supabase.storage
+      .from('story-thumbnails')
+      .upload(path, file, {
+        cacheControl: '31536000',
+        contentType: 'image/jpeg',
+        upsert: false,
+      });
+    if (error) throw error;
+    return path;
+  }
+
+  getStoryThumbnailUrl(path: string | undefined): string {
+    if (!path) return '';
+    return supabase.storage.from('story-thumbnails').getPublicUrl(path).data.publicUrl;
   }
 
   // ── Story Reports ──

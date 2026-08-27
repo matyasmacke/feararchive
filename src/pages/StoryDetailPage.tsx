@@ -347,6 +347,12 @@ export function StoryDetailPage() {
 
       {/* Content */}
       <div className="max-w-3xl mx-auto px-4 py-10">
+        {story.thumbnailPath && (
+          <div className="mb-10 aspect-video w-full overflow-hidden rounded-2xl border border-purple-900/30 bg-gray-950 shadow-xl shadow-purple-950/20">
+            <img src={db.getStoryThumbnailUrl(story.thumbnailPath)} alt={`Thumbnail for ${story.title}`} className="h-full w-full object-cover" />
+          </div>
+        )}
+
         {story.content ? (
           <FormattedContent
             content={story.content}
