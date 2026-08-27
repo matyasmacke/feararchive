@@ -39,46 +39,51 @@ export default function ChangelogPage() {
             No changelog entries yet.
           </div>
         ) : (
-          <div className="space-y-12">
-            {changelogs.map((log) => (
-              <div key={log.id} className="relative pl-8 sm:pl-0">
-                {/* Desktop timeline line */}
-                <div className="hidden sm:block absolute left-[120px] top-0 bottom-[-48px] w-px bg-purple-900/30 last:bottom-0"></div>
-                
-                <div className="sm:flex items-start gap-12">
-                  {/* Date section */}
-                  <div className="hidden sm:flex flex-col items-end pt-1 w-[100px] shrink-0 text-purple-300/60 font-mono text-sm">
-                    {new Date(log.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                  </div>
-                  
-                  {/* Timeline dot */}
-                  <div className="hidden sm:block absolute left-[116px] top-[10px] w-[9px] h-[9px] rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.8)]"></div>
+          <div className="space-y-10 sm:space-y-12">
+            {changelogs.map((log, logIndex) => {
+              const isLast = logIndex === changelogs.length - 1;
 
-                  {/* Mobile date */}
-                  <div className="sm:hidden flex items-center gap-2 text-purple-300/60 font-mono text-xs mb-3">
-                    <Calendar className="w-3 h-3" />
-                    {new Date(log.date).toLocaleDateString()}
-                  </div>
+              return (
+                <article key={log.id} className="relative pl-7 sm:pl-0">
+                  {/* One continuous timeline for both mobile and desktop layouts */}
+                  <div
+                    aria-hidden="true"
+                    className={`absolute left-[5px] top-[11px] w-px bg-gradient-to-b from-purple-500/70 via-purple-800/50 to-purple-900/20 sm:left-[120px] ${
+                      isLast ? 'bottom-0' : 'bottom-[-40px] sm:bottom-[-48px]'
+                    }`}
+                  />
+                  <div
+                    aria-hidden="true"
+                    className="absolute left-[1px] top-[7px] z-10 h-[9px] w-[9px] rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.8)] sm:left-[116px]"
+                  />
 
-                  {/* Card */}
-                  <div className="flex-1 bg-fear-900/50 border border-purple-900/30 rounded-2xl p-6 sm:p-8 hover:border-purple-500/30 transition-colors shadow-lg shadow-black/20">
-                    <h2 className="text-2xl font-bold text-purple-100 mb-6">{log.title}</h2>
-                    <ul className="space-y-4">
-                      {log.changes.map((change, i) => (
-                        <li key={i} className="flex items-start gap-3">
-                          <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-2 shrink-0"></span>
-                          <FormattedContent
-                            content={change}
-                            compact
-                            className="min-w-0 flex-1 text-purple-200/80"
-                          />
-                        </li>
-                      ))}
-                    </ul>
+                  <div className="grid gap-y-3 sm:grid-cols-[100px_minmax(0,1fr)] sm:gap-x-12 sm:gap-y-0">
+                    {/* Date remains attached to the same point on the timeline at every width */}
+                    <div className="flex self-start items-center gap-2 font-mono text-xs text-purple-300/60 sm:justify-end sm:pt-1 sm:text-sm">
+                      <Calendar className="h-3.5 w-3.5 shrink-0 sm:hidden" />
+                      {new Date(log.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </div>
+
+                    {/* Card */}
+                    <div className="min-w-0 bg-fear-900/50 border border-purple-900/30 rounded-2xl p-5 sm:p-8 hover:border-purple-500/30 transition-colors shadow-lg shadow-black/20">
+                      <h2 className="mb-5 text-xl font-bold leading-snug text-purple-100 sm:mb-6 sm:text-2xl">{log.title}</h2>
+                      <ul className="space-y-3 sm:space-y-4">
+                        {log.changes.map((change, i) => (
+                          <li key={i} className="flex min-w-0 items-start gap-3">
+                            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-purple-500"></span>
+                            <FormattedContent
+                              content={change}
+                              compact
+                              className="min-w-0 flex-1 break-words text-sm text-purple-200/80 sm:text-base"
+                            />
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
-                </div>
-              </div>
-            ))}
+                </article>
+              );
+            })}
           </div>
         )}
       </div>

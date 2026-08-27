@@ -81,14 +81,17 @@ export function HomePage() {
     });
   }
 
+  const isArchiveEmpty = stats.totalStories === 0;
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-hidden">
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(147,51,234,0.25),transparent_60%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(88,28,135,0.15),transparent_60%)]" />
         <div className="absolute top-20 left-1/4 w-96 h-96 bg-purple-600/5 rounded-full blur-3xl" />
         <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-purple-800/5 rounded-full blur-3xl" />
+        <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-b from-transparent via-fear-950/70 to-fear-950" />
 
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24 text-center group block animate-fade-in"
                 style={{ animationDelay: `${60}ms`, animationFillMode: 'both' }}
@@ -130,7 +133,7 @@ export function HomePage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="relative -mt-8 mb-16">
+      <div className={`relative -mt-8 ${isArchiveEmpty ? 'mb-4' : 'mb-16'}`}>
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
@@ -293,8 +296,9 @@ export function HomePage() {
       )}
 
       {/* Popular Categories & Top Authors side by side */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mb-20">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {(stats.categoryCounts.length > 0 || stats.topAuthors.length > 0) && (
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mb-20">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Popular Categories */}
           {stats.categoryCounts.length > 0 && (
             <section>
@@ -383,11 +387,12 @@ export function HomePage() {
               </div>
             </section>
           )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* CTA Section */}
-      <section className="relative py-20 px-4">
+      <section className={`relative px-4 ${isArchiveEmpty ? 'pt-10 pb-20' : 'py-20'}`}>
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(147,51,234,0.1),transparent_70%)]" />
         <div className="relative max-w-2xl mx-auto text-center">
           <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-purple-600 to-purple-900 flex items-center justify-center mx-auto mb-6 shadow-xl shadow-purple-900/50">
