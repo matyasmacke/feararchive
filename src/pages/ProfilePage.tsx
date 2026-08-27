@@ -4,17 +4,19 @@ import { db } from '../store/db';
 import { useAuth } from '../store/AuthContext';
 import { ConfirmDialog, useConfirmDialog } from '../components/ConfirmDialog';
 import { ImageCropper } from '../components/ImageCropper';
-import { stripFormatting } from '../components/FormattedContent';
+import { FormattedContent, stripFormatting } from '../components/FormattedContent';
+import { FormattingEditor } from '../components/FormattingEditor';
 import { AdultBadge } from '../components/AdultBadge';
 import { VerifiedBadge } from '../components/VerifiedBadge';
 import type { User, Story } from '../types';
 import {
   User as UserIcon, Edit3, Save, X, BookOpen, Heart,
-  Calendar, Shield, Clock, AlertCircle, Camera, Upload,
+  Shield, Clock, AlertCircle, Camera, Upload,
   Check, Trash2, ExternalLink, FileText,
 } from 'lucide-react';
 
 type ProfileTab = 'stories' | 'drafts' | 'liked';
+const BIO_MAX_LENGTH = 500;
 
 export function ProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -303,6 +305,9 @@ export function ProfilePage() {
     rejected: 'text-red-400',
   };
 
+  const publishedStories = userStories.filter(story => story.status === 'approved');
+  const receivedLikes = publishedStories.reduce((total, story) => total + story.likes, 0);
+
   return (
     <div className="min-h-screen">
       <ConfirmDialog {...dialogProps} />
@@ -325,87 +330,102 @@ export function ProfilePage() {
         onChange={handleFileSelect}
       />
 
-      {/* Profile header */}
-      <div className="relative bg-gradient-to-b from-purple-900/30 via-fear-950 to-fear-950 pt-12 pb-8 px-4">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(147,51,234,0.15),transparent_70%)]" />
-        <div className="relative max-w-3xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-            {/* Avatar */}
-            <div className="relative group shrink-0">
-              <div className="h-28 w-28 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-900 flex items-center justify-center text-white text-4xl font-bold shadow-2xl shadow-purple-900/50 overflow-hidden ring-2 ring-purple-700/50">
-                {editing ? (
-                  avatarPreview ? (
-                    <img src={avatarPreview} alt="" className="h-28 w-28 object-cover" />
-                  ) : (
-                    profileUser.username[0].toUpperCase()
-                  )
-                ) : (
-                  profileUser.avatar ? (
-                    <img src={profileUser.avatar} alt="" className="h-28 w-28 object-cover" />
-                  ) : (
-                    profileUser.username[0].toUpperCase()
-                  )
-                )}
-              </div>
-              {editing && (
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute inset-0 rounded-2xl bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                >
-                  <Camera className="h-6 w-6 text-white mb-1" />
-                  <span className="text-xs text-white/80">Upload</span>
-                </button>
+      {/* Instagram-inspired profile overview */}
+      <header className="relative overflow-hidden border-b border-purple-900/20 bg-gradient-to-b from-purple-950/60 via-fear-950 to-fear-950 px-4 py-8 sm:py-12">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(168,85,247,0.15),transparent_42%)]" />
+        <div className="relative mx-auto grid max-w-4xl grid-cols-[5.5rem_minmax(0,1fr)] gap-x-5 gap-y-5 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-x-10">
+          <div className="group relative flex items-start justify-center">
+            <div className="flex h-22 w-22 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-purple-500 to-purple-950 text-3xl font-bold text-white shadow-2xl shadow-purple-950/60 ring-2 ring-purple-500/60 ring-offset-4 ring-offset-fear-950 sm:h-36 sm:w-36 sm:text-5xl">
+              {(editing ? avatarPreview : profileUser.avatar) ? (
+                <img
+                  src={(editing ? avatarPreview : profileUser.avatar) || ''}
+                  alt={`${profileUser.username}'s profile`}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                profileUser.username[0].toUpperCase()
               )}
-              {editing && (
+            </div>
+            {editing && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                aria-label="Upload profile picture"
+              >
+                <Camera className="h-6 w-6" />
+              </button>
+            )}
+          </div>
+
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <h1 className="min-w-0 truncate text-xl font-semibold text-white sm:text-2xl">{profileUser.username}</h1>
+              {profileUser.isVerified && <VerifiedBadge className="[&>svg]:h-5 [&>svg]:w-5" />}
+              <span className={`rounded-lg border px-2 py-0.5 text-[11px] font-medium capitalize sm:text-xs ${roleColors[profileUser.role] || ''}`}>
+                <Shield className="mr-1 inline h-3 w-3" />
+                {profileUser.role}
+              </span>
+              {isOwnProfile && !editing && (
                 <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute -bottom-2 -right-2 h-8 w-8 bg-purple-600 hover:bg-purple-500 rounded-full flex items-center justify-center text-white shadow-lg transition-colors"
-                  title="Upload photo"
+                  type="button"
+                  onClick={startEditing}
+                  className="flex items-center gap-1.5 rounded-lg border border-purple-900/30 bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-200 transition-colors hover:bg-gray-700 sm:ml-auto sm:px-4 sm:text-sm"
                 >
-                  <Upload className="h-3.5 w-3.5" />
+                  <Edit3 className="h-3.5 w-3.5" />
+                  Edit Profile
                 </button>
               )}
             </div>
 
-            {/* Info */}
-            <div className="flex-1 text-center sm:text-left min-w-0">
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mb-2">
-                <h1 className="text-2xl font-bold text-white">{profileUser.username}</h1>
-                {profileUser.isVerified && <VerifiedBadge className="[&>svg]:h-5 [&>svg]:w-5" />}
-                {profileUser.pendingNameChange && (
-                  <span className="flex items-center gap-1 px-2 py-0.5 bg-purple-900/30 border border-purple-800/30 rounded-lg text-xs text-purple-400">
-                    <Clock className="h-3 w-3" />
-                    → {profileUser.pendingNameChange}
-                  </span>
-                )}
-                <span className={`px-2.5 py-0.5 text-xs font-medium rounded-lg border capitalize ${roleColors[profileUser.role] || ''}`}>
-                  <Shield className="h-3 w-3 inline mr-1" />
-                  {profileUser.role}
-                </span>
+            {profileUser.pendingNameChange && (
+              <div className="mt-2 flex w-fit items-center gap-1 rounded-lg border border-purple-800/30 bg-purple-900/30 px-2 py-1 text-xs text-purple-300">
+                <Clock className="h-3 w-3" />
+                Name change pending: {profileUser.pendingNameChange}
               </div>
+            )}
 
-              {/* Bio - View mode */}
-              {!editing && (
-                <p className="text-gray-400 text-sm mb-3 max-w-lg">
-                  {profileUser.bio || 'No bio yet.'}
-                </p>
+            <div className="mt-5 grid grid-cols-3 divide-x divide-purple-900/30 border-y border-purple-900/20 py-3 text-center sm:max-w-md sm:border-y-0 sm:py-0 sm:text-left">
+              <div className="sm:pr-6">
+                <strong className="block text-base font-semibold text-white sm:inline sm:text-lg">{publishedStories.length}</strong>
+                <span className="block text-[11px] text-gray-500 sm:ml-1.5 sm:inline sm:text-sm">stories</span>
+              </div>
+              <div className="px-3 sm:px-6">
+                <strong className="block text-base font-semibold text-white sm:inline sm:text-lg">{receivedLikes}</strong>
+                <span className="block text-[11px] text-gray-500 sm:ml-1.5 sm:inline sm:text-sm">likes</span>
+              </div>
+              <div className="sm:pl-6">
+                <strong className="block text-sm font-semibold text-white sm:inline sm:text-base">
+                  {new Date(profileUser.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                </strong>
+                <span className="block text-[11px] text-gray-500 sm:ml-1.5 sm:inline sm:text-sm">joined</span>
+              </div>
+            </div>
+          </div>
+
+          {!editing && (
+            <div className="col-span-2 min-w-0 border-t border-purple-900/20 pt-4 sm:col-span-1 sm:col-start-2 sm:border-t-0 sm:pt-0">
+              {profileUser.bio ? (
+                <FormattedContent
+                  content={profileUser.bio}
+                  compact
+                  allowLinks={false}
+                  className="max-w-2xl text-sm text-gray-300 [&_h3]:text-lg [&_h4]:text-sm [&_p]:leading-6"
+                />
+              ) : (
+                <p className="text-sm italic text-gray-600">No bio yet.</p>
               )}
 
-              {/* Social Links - View mode */}
-              {!editing && (profileUser.youtube || profileUser.instagram) && (
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mb-3">
+              {(profileUser.youtube || profileUser.instagram) && (
+                <div className="mt-4 flex flex-wrap items-center gap-2">
                   {profileUser.youtube && (
                     <a
                       href={profileUser.youtube.startsWith('http') ? profileUser.youtube : `https://${profileUser.youtube}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-900/20 border border-red-800/30 rounded-lg text-xs text-red-400 hover:text-red-300 hover:bg-red-900/30 transition-colors"
+                      className="flex items-center gap-1.5 rounded-lg border border-red-800/30 bg-red-900/20 px-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-900/30 hover:text-red-300"
                     >
-                      <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M23.5 6.2c-.3-1-1-1.8-2-2.1C19.6 3.5 12 3.5 12 3.5s-7.6 0-9.5.6c-1 .3-1.7 1.1-2 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8c.3 1 1 1.8 2 2.1 1.9.6 9.5.6 9.5.6s7.6 0 9.5-.6c1-.3 1.7-1.1 2-2.1.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.5 15.6V8.4l6.3 3.6-6.3 3.6z"/>
-                      </svg>
-                      YouTube
-                      <ExternalLink className="h-3 w-3 opacity-50" />
+                      YouTube <ExternalLink className="h-3 w-3" />
                     </a>
                   )}
                   {profileUser.instagram && (
@@ -413,51 +433,29 @@ export function ProfilePage() {
                       href={profileUser.instagram.startsWith('http') ? profileUser.instagram : `https://${profileUser.instagram}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-pink-900/20 border border-pink-800/30 rounded-lg text-xs text-pink-400 hover:text-pink-300 hover:bg-pink-900/30 transition-colors"
+                      className="flex items-center gap-1.5 rounded-lg border border-pink-800/30 bg-pink-900/20 px-3 py-1.5 text-xs font-medium text-pink-400 transition-colors hover:bg-pink-900/30 hover:text-pink-300"
                     >
-                      <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2.2c3.2 0 3.6 0 4.8.1 1.2.1 1.8.2 2.2.4.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.2.4.4 1.1.4 2.2.1 1.3.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 1.2-.2 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.2-1.1.4-2.2.4-1.3.1-1.6.1-4.8.1s-3.6 0-4.8-.1c-1.2-.1-1.8-.2-2.2-.4-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.2-.4-.4-1.1-.4-2.2-.1-1.3-.1-1.6-.1-4.8s0-3.6.1-4.8c.1-1.2.2-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.2 1.1-.4 2.2-.4 1.2-.1 1.6-.1 4.8-.1zM12 0C8.7 0 8.3 0 7.1.1 5.8.1 4.9.3 4.1.6c-.8.3-1.5.7-2.2 1.4C1.2 2.6.8 3.3.6 4.1.3 4.9.1 5.8.1 7.1 0 8.3 0 8.7 0 12s0 3.7.1 4.9c.1 1.3.2 2.2.5 2.9.3.8.7 1.5 1.4 2.2.7.7 1.4 1.1 2.2 1.4.8.3 1.6.5 2.9.5C8.3 24 8.7 24 12 24s3.7 0 4.9-.1c1.3-.1 2.2-.2 2.9-.5.8-.3 1.5-.7 2.2-1.4.7-.7 1.1-1.4 1.4-2.2.3-.8.5-1.6.5-2.9.1-1.2.1-1.6.1-4.9s0-3.7-.1-4.9c-.1-1.3-.2-2.2-.5-2.9-.3-.8-.7-1.5-1.4-2.2C21.4 1.3 20.7.9 19.9.6c-.8-.3-1.6-.5-2.9-.5C15.7 0 15.3 0 12 0zm0 5.8a6.2 6.2 0 100 12.4 6.2 6.2 0 000-12.4zM12 16a4 4 0 110-8 4 4 0 010 8zm6.4-10.8a1.4 1.4 0 110 2.8 1.4 1.4 0 010-2.8z"/>
-                      </svg>
-                      Instagram
-                      <ExternalLink className="h-3 w-3 opacity-50" />
+                      Instagram <ExternalLink className="h-3 w-3" />
                     </a>
                   )}
+                  <span className={`ml-auto flex items-center gap-1 text-xs capitalize ${statusColors[profileUser.status] || ''}`}>
+                    <Clock className="h-3.5 w-3.5" /> {profileUser.status}
+                  </span>
                 </div>
               )}
-
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 text-xs text-gray-500">
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5" />
-                  Joined {new Date(profileUser.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
+              {!profileUser.youtube && !profileUser.instagram && (
+                <span className={`mt-3 flex w-fit items-center gap-1 text-xs capitalize ${statusColors[profileUser.status] || ''}`}>
+                  <Clock className="h-3.5 w-3.5" /> {profileUser.status}
                 </span>
-                <span className="flex items-center gap-1">
-                  <BookOpen className="h-3.5 w-3.5" />
-                  {userStories.filter(s => s.status === 'approved').length} published
-                </span>
-                <span className={`flex items-center gap-1 capitalize ${statusColors[profileUser.status] || ''}`}>
-                  <Clock className="h-3.5 w-3.5" />
-                  {profileUser.status}
-                </span>
-              </div>
-
-              {isOwnProfile && !editing && (
-                <div className="mt-4 flex gap-2 justify-center sm:justify-start">
-                  <button
-                    onClick={startEditing}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition-colors"
-                  >
-                    <Edit3 className="h-3.5 w-3.5" /> Edit Profile
-                  </button>
-                </div>
               )}
             </div>
-          </div>
+          )}
         </div>
-      </div>
+      </header>
 
       {/* Edit Profile Section — tabbed panel */}
       {isOwnProfile && currentUser && editing && (
-        <div className="max-w-3xl mx-auto px-4 mt-6">
+        <div className="mx-auto mt-6 max-w-4xl px-4">
           <div className="bg-gray-900/50 border border-purple-900/20 rounded-xl overflow-hidden shadow-xl">
             {/* Tabs Header */}
             <div className="flex border-b border-purple-900/20">
@@ -548,18 +546,22 @@ export function ProfilePage() {
                     <label className="text-xs text-gray-500 mb-2 flex items-center gap-1.5 font-medium uppercase tracking-wide">
                       Bio
                     </label>
-                    <textarea
+                    <FormattingEditor
                       value={bio}
-                      onChange={e => { if (e.target.value.length <= 160) setBio(e.target.value); }}
-                      placeholder="Tell us about yourself..."
-                      rows={3}
-                      maxLength={160}
-                      className="w-full px-3 py-2 bg-gray-800/80 border border-purple-900/30 rounded-lg text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-all resize-none"
+                      onChange={value => setBio(value.slice(0, BIO_MAX_LENGTH))}
+                      placeholder={'Tell people about yourself...\nPress Enter to start a new line.'}
+                      rows={5}
+                      maxLength={BIO_MAX_LENGTH}
+                      allowLinks={false}
+                      compact
+                      aria-label="Profile bio"
                     />
-                    <div className="flex justify-between mt-1">
-                      <span className="text-xs text-gray-600">Short bio about yourself</span>
-                      <span className={`text-xs ${bio.length >= 150 ? 'text-amber-400' : 'text-gray-600'}`}>
-                        {bio.length}/160
+                    <div className="mt-1.5 flex items-start justify-between gap-4">
+                      <span className="text-xs leading-relaxed text-gray-600">
+                        Line breaks and formatting are shown on your profile. Links and images are not supported in the bio.
+                      </span>
+                      <span className={`shrink-0 text-xs ${bio.length >= BIO_MAX_LENGTH - 25 ? 'text-amber-400' : 'text-gray-600'}`}>
+                        {bio.length}/{BIO_MAX_LENGTH}
                       </span>
                     </div>
                   </div>
@@ -726,7 +728,7 @@ export function ProfilePage() {
       )}
 
       {/* Content tabs */}
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <div className="mx-auto max-w-4xl px-4 py-8">
         <div className="flex flex-wrap gap-1 mb-6 bg-gray-900/50 rounded-xl p-1 border border-purple-900/20 w-full sm:w-fit">
           <button
             onClick={() => setActiveTab('stories')}

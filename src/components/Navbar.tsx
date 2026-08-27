@@ -15,6 +15,24 @@ import { stripFormatting } from './FormattedContent';
 import { AdultBadge } from './AdultBadge';
 import { VerifiedBadge } from './VerifiedBadge';
 
+interface NotificationCounts {
+  pendingStories: number;
+  openReports: number;
+  pendingUsers: number;
+  pendingNames: number;
+  pendingModApps: number;
+  total: number;
+}
+
+const EMPTY_NOTIFICATIONS: NotificationCounts = {
+  pendingStories: 0,
+  openReports: 0,
+  pendingUsers: 0,
+  pendingNames: 0,
+  pendingModApps: 0,
+  total: 0,
+};
+
 export function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -30,6 +48,9 @@ export function Navbar() {
 
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
+  const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
+  const previousNotificationsRef = useRef<NotificationCounts | null>(null);
+  const notificationViewerRef = useRef<string | null>(null);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -58,13 +79,70 @@ export function Navbar() {
   const isAdmin = user?.role === 'admin';
 
   // ── Real-time notifications ──
-  const [notifications, setNotifications] = useState({ pendingStories: 0, openReports: 0, pendingUsers: 0, pendingNames: 0, pendingModApps: 0, total: 0 });
+  const [notifications, setNotifications] = useState<NotificationCounts>(EMPTY_NOTIFICATIONS);
+
+  useEffect(() => {
+    const audio = new Audio(`${import.meta.env.BASE_URL}notification.mp3`);
+    audio.preload = 'auto';
+    audio.volume = 0.65;
+    notificationAudioRef.current = audio;
+
+    let unlocked = false;
+    const removeUnlockListeners = () => {
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+    const unlockAudio = () => {
+      if (unlocked) return;
+      const intendedVolume = audio.volume;
+      audio.volume = 0;
+      void audio.play()
+        .then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.volume = intendedVolume;
+          unlocked = true;
+          removeUnlockListeners();
+        })
+        .catch(() => {
+          audio.volume = intendedVolume;
+        });
+    };
+
+    window.addEventListener('pointerdown', unlockAudio);
+    window.addEventListener('keydown', unlockAudio);
+
+    return () => {
+      removeUnlockListeners();
+      audio.pause();
+      notificationAudioRef.current = null;
+    };
+  }, []);
+
+  const playNotificationSound = useCallback(() => {
+    const audio = notificationAudioRef.current;
+    if (!audio) return;
+    audio.currentTime = 0;
+    audio.volume = 0.65;
+    void audio.play().catch(() => {
+      // Browsers may block sound until the user first interacts with the page.
+    });
+  }, []);
 
   const refreshNotifications = useCallback(async () => {
     if (!user || (user.role !== 'admin' && user.role !== 'moderator')) {
-      setNotifications({ pendingStories: 0, openReports: 0, pendingUsers: 0, pendingNames: 0, pendingModApps: 0, total: 0 });
+      previousNotificationsRef.current = null;
+      notificationViewerRef.current = null;
+      setNotifications(EMPTY_NOTIFICATIONS);
       return;
     }
+
+    const notificationViewer = `${user.id}:${user.role}`;
+    if (notificationViewerRef.current !== notificationViewer) {
+      notificationViewerRef.current = notificationViewer;
+      previousNotificationsRef.current = null;
+    }
+
     const [stories, reports, users, applications] = await Promise.all([
       db.getPendingStories(),
       db.getStoryReports(),
@@ -77,8 +155,20 @@ export function Navbar() {
     const pendingNames = users.filter(u => u.pendingNameChange).length;
     const modApps = isAdmin ? applications.filter(a => a.status === 'pending').length : 0;
     const total = pendingStories + openReports + pendingUsers + pendingNames + modApps;
-    setNotifications({ pendingStories, openReports, pendingUsers, pendingNames, pendingModApps: modApps, total });
-  }, [isAdmin, user]);
+    const nextNotifications = { pendingStories, openReports, pendingUsers, pendingNames, pendingModApps: modApps, total };
+    const previousNotifications = previousNotificationsRef.current;
+    const hasNewNotification = previousNotifications !== null && (
+      nextNotifications.pendingStories > previousNotifications.pendingStories
+      || nextNotifications.openReports > previousNotifications.openReports
+      || nextNotifications.pendingUsers > previousNotifications.pendingUsers
+      || nextNotifications.pendingNames > previousNotifications.pendingNames
+      || nextNotifications.pendingModApps > previousNotifications.pendingModApps
+    );
+
+    previousNotificationsRef.current = nextNotifications;
+    setNotifications(nextNotifications);
+    if (hasNewNotification) playNotificationSound();
+  }, [isAdmin, playNotificationSound, user]);
 
   useEffect(() => {
     refreshNotifications();
