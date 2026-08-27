@@ -228,7 +228,7 @@ export function FormattedContent({ content, className = '', compact = false, all
     );
   }
 
-  return <div className={`formatted-content ${className}`}>{blocks}</div>;
+  return <div className={`formatted-content min-w-0 max-w-full [overflow-wrap:anywhere] [word-break:break-word] ${className}`}>{blocks}</div>;
 }
 
 export function stripFormatting(content: string): string {

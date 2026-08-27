@@ -6,7 +6,7 @@ import {
   BookOpen, Grid3X3, Info, Menu, X,
   User, PenTool, LogOut, Eye,
   Bell, LayoutDashboard, Settings, Shield, ChevronDown, Edit3,
-  Search, Clock, Heart, Home, Mail,
+  Search, Clock, Heart, Home, Mail, Flag,
 } from 'lucide-react';
 import type { Story, User as UserType } from '../types';
 import { COLOR_PRESETS } from '../types';
@@ -57,24 +57,26 @@ export function Navbar() {
   const isAdmin = user?.role === 'admin';
 
   // ── Real-time notifications ──
-  const [notifications, setNotifications] = useState({ pendingStories: 0, pendingUsers: 0, pendingNames: 0, pendingModApps: 0, total: 0 });
+  const [notifications, setNotifications] = useState({ pendingStories: 0, openReports: 0, pendingUsers: 0, pendingNames: 0, pendingModApps: 0, total: 0 });
 
   const refreshNotifications = useCallback(async () => {
     if (!user || (user.role !== 'admin' && user.role !== 'moderator')) {
-      setNotifications({ pendingStories: 0, pendingUsers: 0, pendingNames: 0, pendingModApps: 0, total: 0 });
+      setNotifications({ pendingStories: 0, openReports: 0, pendingUsers: 0, pendingNames: 0, pendingModApps: 0, total: 0 });
       return;
     }
-    const [stories, users, applications] = await Promise.all([
+    const [stories, reports, users, applications] = await Promise.all([
       db.getPendingStories(),
+      db.getStoryReports(),
       db.getUsers(),
       db.getModApplications(),
     ]);
     const pendingStories = stories.length;
+    const openReports = reports.filter(report => report.status === 'open').length;
     const pendingUsers = users.filter(u => u.status === 'pending').length;
     const pendingNames = users.filter(u => u.pendingNameChange).length;
     const modApps = isAdmin ? applications.filter(a => a.status === 'pending').length : 0;
-    const total = pendingStories + pendingUsers + pendingNames + modApps;
-    setNotifications({ pendingStories, pendingUsers, pendingNames, pendingModApps: modApps, total });
+    const total = pendingStories + openReports + pendingUsers + pendingNames + modApps;
+    setNotifications({ pendingStories, openReports, pendingUsers, pendingNames, pendingModApps: modApps, total });
   }, [isAdmin, user]);
 
   useEffect(() => {
@@ -252,6 +254,18 @@ export function Navbar() {
                                     <div className="flex-1 min-w-0">
                                       <p className="text-sm font-medium text-gray-200">{notifications.pendingStories} pending {notifications.pendingStories === 1 ? 'story' : 'stories'}</p>
                                       <p className="text-xs text-gray-500">Waiting for review</p>
+                                    </div>
+                                    <ChevronDown className="h-4 w-4 text-gray-600 -rotate-90 shrink-0" />
+                                  </button>
+                                )}
+                                {notifications.openReports > 0 && (
+                                  <button onClick={() => { navigate('/admin?tab=reports'); closeNotif(); }} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-900/20 transition-colors text-left">
+                                    <div className="h-10 w-10 rounded-xl bg-red-900/30 border border-red-800/30 flex items-center justify-center shrink-0">
+                                      <Flag className="h-5 w-5 text-red-400" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-gray-200">{notifications.openReports} open {notifications.openReports === 1 ? 'report' : 'reports'}</p>
+                                      <p className="text-xs text-gray-500">Waiting for moderator review</p>
                                     </div>
                                     <ChevronDown className="h-4 w-4 text-gray-600 -rotate-90 shrink-0" />
                                   </button>

@@ -317,7 +317,7 @@ export function StoryDetailPage() {
             )}
           </div>
 
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
+          <h1 className="mb-4 max-w-full text-3xl font-bold text-white [overflow-wrap:anywhere] [word-break:break-word] md:text-4xl">
             {story.title || 'Untitled Draft'}
           </h1>
 
